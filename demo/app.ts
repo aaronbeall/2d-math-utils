@@ -1,7 +1,7 @@
 import { html, render } from 'lit-html';
 import { repeat } from 'lit-html/directives/repeat.js';
 import { demos } from './pages/index';
-import { clearCanvas } from './utils';
+import { clearCanvas, stop } from './utils';
 
 function renderNav(currentSection: string, currentMethod?: string) {
   return html`
@@ -35,6 +35,8 @@ function renderDemo(section: string, method?: string) {
 function route() {
   const [section = 'point', method] = location.hash.slice(1).split('/');
   const demo = document.getElementById('demo')!;
+
+  stop();
   
   render(renderDemo(section, method), demo);
   

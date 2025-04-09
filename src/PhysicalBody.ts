@@ -2,37 +2,26 @@ import { Point, Vector2d } from './types';
 import * as vector from './vector';
 import * as physics from './physics';
 
-export interface PhysicalProperties {
-  mass?: number;
-  drag?: number;
-  angularDrag?: number;
-  bounceRestitution?: number;
-  radius?: number;
-}
 
 export class PhysicalBody {
-  position: Point;
-  velocity: Vector2d;
-  acceleration: Vector2d;
-  angle: number;
-  angularVelocity: number;
-  mass: number;
-  drag: number;
-  angularDrag: number;
-  bounceRestitution: number;
-  radius: number;
 
-  constructor(position: Vector2d, props: PhysicalProperties = {}) {
-    this.position = position;
-    this.velocity = vector.zero();
-    this.acceleration = vector.zero();
-    this.angle = 0;
-    this.angularVelocity = 0;
-    this.mass = props.mass ?? 1;
-    this.drag = props.drag ?? 0;
-    this.angularDrag = props.angularDrag ?? 0;
-    this.bounceRestitution = props.bounceRestitution ?? 0.8;
-    this.radius = props.radius ?? 0;
+  static DOWNWARD_GRAVITY: Vector2d = { x: 0, y: 980 }; // Gravity vector (downward)
+
+  x: number = 0;
+  y: number = 0;
+  velocity: Vector2d = vector.zero();
+  acceleration: Vector2d = vector.zero();
+  angle: number = 0;
+  angularVelocity: number = 0;
+  mass: number = 1;
+  drag: number = 0;
+  angularDrag: number = 0;
+  elasticity: number = 0.8; // 0 = no bounce, 1 = full bounce
+  radius: number = 0;
+  gravity: Vector2d = vector.zero();
+
+  constructor(props: Partial<PhysicalBody> = {}) {
+    Object.assign(this, props);
   }
 
   /**
@@ -45,15 +34,18 @@ export class PhysicalBody {
    * - acceleration: x=2 means "velocity increases by 2 per second"
    */
   update(deltaTime: number) {
-    // Acceleration changes velocity
-    this.velocity = vector.add(this.velocity, vector.scale(this.acceleration, deltaTime));
+    // Apply gravity with mass
+    this.applyForce(vector.scale(this.gravity, this.mass));
     
-    // Drag reduces velocity
+    // Apply drag
     if (this.drag > 0) {
-      this.velocity = vector.scale(this.velocity, 1 - this.drag * deltaTime);
+      this.applyForce(vector.scale(this.velocity, 1 - this.drag * deltaTime));
     }
 
-    // Velocity changes position
+    // Update velocity with acceleration
+    this.velocity = vector.add(this.velocity, vector.scale(this.acceleration, deltaTime));
+
+    // Update position with velocity
     this.position = vector.add(this.position, vector.scale(this.velocity, deltaTime));
     
     // Update angle with angular velocity
@@ -64,8 +56,9 @@ export class PhysicalBody {
       this.angularVelocity *= (1 - this.angularDrag * deltaTime);
     }
 
-    // Reset acceleration - forces must be continuously applied or they stop affecting velocity
+    // Reset forces
     this.acceleration = vector.zero();
+    this.angularVelocity = 0;
   }
 
   /**
@@ -99,15 +92,15 @@ export class PhysicalBody {
    * Example: Rocket engine, car acceleration
    */
   thrust(force: number, angle: number = this.angle) {
-    this.acceleration = physics.applyThrust(this.acceleration, force, angle, this.mass);
+    this.velocity = physics.applyThrust(this.velocity, force, angle, this.mass);
   }
 
   collideWithBody(other: PhysicalBody): boolean {
     const distance = vector.length(vector.subtract(other.position, this.position));
     if (distance > this.radius + other.radius) return false;
 
-    // Calculate collision response
-    const [v1, v2] = physics.collide(
+    // Calculate and apply collision response
+    const [cv1, cv2] = physics.collide(
       this.velocity,
       other.velocity,
       this.position,
@@ -116,18 +109,40 @@ export class PhysicalBody {
       other.mass
     );
 
-    // Apply new velocities with restitution
-    this.velocity = vector.scale(v1, this.bounceRestitution);
-    other.velocity = vector.scale(v2, other.bounceRestitution);
+    this.velocity = vector.scale(cv1, this.elasticity);
+    other.velocity = vector.scale(cv2, other.elasticity);
 
     return true;
   }
 
-  collideWithSurface(normal: Vector2d) {
-    this.velocity = vector.scale(
-      vector.reflect(this.velocity, normal),
-      this.bounceRestitution
+  collideWithSurface(normal: Vector2d, point: Point) {
+    // Normalize the normal vector
+    const n = vector.normalize(normal);
+    
+    // Calculate penetration (negative means penetrating)
+    const d = vector.dot(vector.subtract(this.position, point), n);
+    if (d >= this.radius) return;
+    
+    // Move out of surface by remaining distance
+    this.position = vector.add(
+      this.position,
+      vector.scale(n, this.radius - d)
     );
+    
+    // Apply reflection with elasticity
+    this.velocity = vector.scale(
+      vector.reflect(this.velocity, n),
+      this.elasticity
+    );
+  }
+
+  get position(): Vector2d {
+    return { x: this.x, y: this.y };
+  }
+
+  set position(value: Vector2d) {
+    this.x = value.x;
+    this.y = value.y;
   }
 
   get forward(): Vector2d {

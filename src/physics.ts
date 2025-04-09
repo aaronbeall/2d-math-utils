@@ -3,7 +3,7 @@ import { Vector2d } from "./types";
 import { add, normalize, scale, subtract } from "./vector";
 
 /**
- * Applies a force to an object's acceleration vector
+ * Applies a force to an object's acceleration or velocity vector
  * @param vector Current acceleration vector
  * @param force Force vector to apply
  * @param mass Object's mass (affects force impact)

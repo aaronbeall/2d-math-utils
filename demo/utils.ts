@@ -200,20 +200,35 @@ export function key({ canvas, draw }: HandlerContext, mappings: Record<string, (
     return () => canvas.removeEventListener('keydown', handler);
 }
 
-export function animate(draw: () => void, step?: () => void) {
-    let animationFrameId: number;
-    let isRunning = true;
+let currentAnimation: number | null = null;
+
+export function animate(draw: () => void) {
+    stop();
 
     function loop() {
-        if (!isRunning) return;
-        step?.();
         draw();
-        animationFrameId = requestAnimationFrame(loop);
+        currentAnimation = requestAnimationFrame(loop);
     }
 
     loop();
-    return () => {
-        isRunning = false;
-        cancelAnimationFrame(animationFrameId);
-    };
+}
+
+export function simulate(update: (deltaTime: number) => void, draw: () => void) {
+    let lastTime = performance.now();
+    
+    animate(() => {
+        const time = performance.now();
+        const deltaTime = Math.min((time - lastTime) / 1000, 0.1); // Cap at 100ms
+        lastTime = time;
+
+        update(deltaTime);
+        draw();
+    });
+}
+
+export function stop() {
+    if (currentAnimation !== null) {
+        cancelAnimationFrame(currentAnimation);
+        currentAnimation = null;
+    }
 }

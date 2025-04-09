@@ -154,3 +154,13 @@ export const rotateByRadians = (v: Vector2d, angleRadians: number): Vector2d => 
 export const rotateByDegrees = (v: Vector2d, angleDegrees: number): Vector2d =>
     rotateByRadians(v, angleDegrees * Math.PI / 180);
 
+/**
+ * Calculates the dot product of two vectors
+ * @example
+ * const v1 = { x: 1, y: 0 };
+ * const v2 = { x: 0, y: 1 };
+ * dot(v1, v2) // returns 0
+ */
+export const dot = (v1: Vector2d, v2: Vector2d): number => 
+  v1.x * v2.x + v1.y * v2.y;
+
