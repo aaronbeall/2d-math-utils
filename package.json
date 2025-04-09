@@ -12,17 +12,24 @@
     "build:demo": "parcel build demo/index.html --dist-dir docs --public-url ./",
     "prepublishOnly": "npm run build && npm run build:demo"
   },
-  "keywords": ["math", "2d", "geometry"],
+  "keywords": [
+    "math",
+    "2d",
+    "geometry"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.5.3",
     "jest": "^29.6.2",
+    "parcel": "^2.9.3",
     "ts-jest": "^29.1.1",
-    "typescript": "^5.1.6",
-    "parcel": "^2.9.3"
+    "typescript": "^5.1.6"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "lit-html": "^2.7.5"
+  }
 }
