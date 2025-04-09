@@ -1,10 +1,7 @@
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export const distance = (p1: Point, p2: Point): number => {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  return Math.sqrt(dx * dx + dy * dy);
-};
+export * from './types';
+export * as point from './point';
+export * as line from './line';
+export * as angle from './angle';
+export * as vector from './vector';
+export * as physics from './physics';
+export * from './PhysicalBody';
