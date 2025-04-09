@@ -41,13 +41,13 @@ describe('vector', () => {
     });
   });
 
-  describe('magnitude', () => {
+  describe('length', () => {
     it('calculates vector length', () => {
-      expect(vector.magnitude({ x: 3, y: 4 })).toBe(5);
+      expect(vector.length({ x: 3, y: 4 })).toBe(5);
     });
 
     it('handles zero vector', () => {
-      expect(vector.magnitude({ x: 0, y: 0 })).toBe(0);
+      expect(vector.length({ x: 0, y: 0 })).toBe(0);
     });
   });
 
@@ -64,16 +64,16 @@ describe('vector', () => {
     });
   });
 
-  describe('clampMagnitude', () => {
+  describe('clampLength', () => {
     it('clamps long vectors', () => {
-      const result = vector.clampMagnitude({ x: 3, y: 4 }, 2.5);
+      const result = vector.clampLength({ x: 3, y: 4 }, 2.5);
       expect(result.x).toBeCloseTo(1.5);
       expect(result.y).toBeCloseTo(2);
     });
 
     it('leaves short vectors unchanged', () => {
       const v = { x: 1, y: 1 };
-      expect(vector.clampMagnitude(v, 2)).toEqual(v);
+      expect(vector.clampLength(v, 2)).toEqual(v);
     });
   });
 

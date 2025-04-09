@@ -103,7 +103,7 @@ export class PhysicalBody {
   }
 
   collideWithBody(other: PhysicalBody): boolean {
-    const distance = vector.magnitude(vector.subtract(other.position, this.position));
+    const distance = vector.length(vector.subtract(other.position, this.position));
     if (distance > this.radius + other.radius) return false;
 
     // Calculate collision response

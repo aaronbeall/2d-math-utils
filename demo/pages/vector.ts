@@ -14,13 +14,13 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
     scale: (canvas) => {
         // Interactive vector scaling visualization
     },
-    magnitude: (canvas) => {
+    length: (canvas) => {
         // Interactive vector length visualization
     },
     normalize: (canvas) => {
         // Interactive vector normalization demo
     },
-    clampMagnitude: (canvas) => {
+    clampLength: (canvas) => {
         // Interactive vector clamping visualization
     },
     interpolate: (canvas) => {
@@ -34,5 +34,11 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
     },
     reflect: (canvas) => {
         // Interactive reflection visualization
+    },
+    fromAngleRadians: (canvas) => {
+        // Interactive angle to vector (radians) visualization
+    },
+    fromAngleDegrees: (canvas) => {
+        // Interactive angle to vector (degrees) visualization
     }
 };

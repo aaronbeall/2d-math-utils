@@ -10,8 +10,8 @@ export const demos = {
     angle: angleDemos,
     line: lineDemos,
     vector: vectorDemos,
-    physics: physicsDemos,
-    body: bodyDemos
+    body: bodyDemos,
+    physics: physicsDemos
 };
 
 export type DemoFunction = (canvas: HTMLCanvasElement) => void;
