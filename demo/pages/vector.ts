@@ -93,8 +93,7 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
         const ctx = canvas.getContext('2d')!;
         const center = { x: canvas.width/2, y: canvas.height/2 };
         let v = { x: 100, y: 0 };
-        let scale = 1;
-
+        let scale = .75
         function draw() {
             clearCanvas(ctx);
             drawArrow(ctx, center, vector.add(center, v), 'blue');
