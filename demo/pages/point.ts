@@ -1,6 +1,6 @@
 import * as point from '../../src/point';
 import { DemoFunction } from './index';
-import { clearCanvas, drawPoint, drawLine, drawText, drawResults, drawCircle, drag, click, move, drawRect, key } from '../utils';
+import { clearCanvas, drawPoint, drawLine, drawText, drawResults, drawCircle, drag, click, move, drawRect, key, animate } from '../utils';
 import { Point } from '../../src';
 
 export const pointDemos: Record<keyof typeof point, DemoFunction> = {
@@ -198,5 +198,39 @@ export const pointDemos: Record<keyof typeof point, DemoFunction> = {
         });
         
         draw();
+    },
+
+    moveTowards: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        let current = { x: canvas.width/2, y: canvas.height/2 };
+        let target = { x: canvas.width/2 + 100, y: canvas.height/2 };
+        let maxDistance = 5;
+
+        function draw() {
+            clearCanvas(ctx);
+            drawPoint(ctx, current, 'blue');
+            drawPoint(ctx, target, 'red');
+            drawLine(ctx, { start: current, end: target }, 'gray');
+            
+            drawResults(ctx, [
+                ['Current', current],
+                ['Target', target],
+                ['Distance', point.distance(current, target)],
+                ['Speed', maxDistance],
+                'Move mouse to set target',
+                'Use +/- to adjust speed'
+            ]);
+        }
+
+        move({ canvas, draw }, pos => target = pos);
+        key({ canvas, draw }, {
+            '+=': () => maxDistance *= 1.2,
+            '-_': () => maxDistance /= 1.2
+        });
+
+        animate(
+            draw,
+            () => current = point.moveTowards(current, target, maxDistance)
+        );
     }
 };

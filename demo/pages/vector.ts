@@ -1,5 +1,6 @@
 import * as vector from '../../src/vector';
 import * as point from '../../src/point';
+import * as angle from '../../src/angle';
 import { DemoFunction } from './index';
 import { clearCanvas, drawPoint, drawLine, drawResults, drawArrow, drag, move, key, drawCircle, animate } from '../utils';
 
@@ -295,50 +296,12 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
         draw();
     },
 
-    moveTowards: (canvas) => {
-        const ctx = canvas.getContext('2d')!;
-        const center = { x: canvas.width/2, y: canvas.height/2 };
-        let current = { x: -100, y: 0 };
-        let target = { x: 100, y: 0 };
-        let maxDistance = 10;
-
-        function draw() {
-            clearCanvas(ctx);
-            const currentPos = vector.add(center, current);
-            const targetPos = vector.add(center, target);
-            
-            drawArrow(ctx, center, currentPos, 'blue');
-            drawArrow(ctx, center, targetPos, 'red');
-            
-            drawResults(ctx, [
-                ['Current', current],
-                ['Target', target],
-                ['Max Distance', maxDistance],
-                'Drag red arrow to set target',
-                'Use +/- to adjust speed'
-            ]);
-        }
-
-        drag({ canvas, draw }, {
-            onDrag: pos => target = vector.subtract(pos, center)
-        });
-
-        key({ canvas, draw }, {
-            '+=': () => maxDistance *= 1.1,
-            '-_': () => maxDistance /= 1.1
-        });
-
-        animate(
-            draw,
-            () => current = vector.moveTowards(current, target, maxDistance)
-        );
-    },
-
     reflect: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         const center = { x: canvas.width/2, y: canvas.height/2 };
         let velocity = { x: 100, y: 100 };
-        let normal = { x: 1, y: 0 };
+        let normal = vector.fromAngleRadians(0, 1);  // Start pointing right, length 1
+        const rotateAmount = Math.PI/12;
         
         function draw() {
             clearCanvas(ctx);
@@ -369,12 +332,12 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
 
         key({ canvas, draw }, {
             '+=': () => {
-                const angle = Math.atan2(normal.y, normal.x) + Math.PI/12;
-                normal = { x: Math.cos(angle), y: Math.sin(angle) };
+                const currentAngle = angle.radiansBetweenPoints(center, vector.add(center, normal));
+                normal = vector.fromAngleRadians(currentAngle + rotateAmount, 1);
             },
             '-_': () => {
-                const angle = Math.atan2(normal.y, normal.x) - Math.PI/12;
-                normal = { x: Math.cos(angle), y: Math.sin(angle) };
+                const currentAngle = angle.radiansBetweenPoints(center, vector.add(center, normal));
+                normal = vector.fromAngleRadians(currentAngle - rotateAmount, 1);
             }
         });
 
@@ -436,6 +399,70 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
             '-_': () => angle -= 15,
             '1': () => length = Math.max(10, length - 10),
             '2': () => length += 10
+        });
+
+        draw();
+    },
+
+    rotateByRadians: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        const center = { x: canvas.width/2, y: canvas.height/2 };
+        let v = { x: 100, y: 0 };
+        let angle = Math.PI/4;
+
+        function draw() {
+            clearCanvas(ctx);
+            drawArrow(ctx, center, vector.add(center, v), 'blue');
+            drawArrow(ctx, center, vector.add(center, vector.rotateByRadians(v, angle)), 'green');
+            
+            drawResults(ctx, [
+                ['Vector', v],
+                ['Angle (rad)', angle],
+                ['Rotated', vector.rotateByRadians(v, angle)],
+                'Drag blue arrow to adjust vector',
+                'Use +/- to adjust angle'
+            ]);
+        }
+
+        drag({ canvas, draw }, {
+            onDrag: pos => v = vector.subtract(pos, center)
+        });
+
+        key({ canvas, draw }, {
+            '+=': () => angle += Math.PI/12,
+            '-_': () => angle -= Math.PI/12
+        });
+
+        draw();
+    },
+
+    rotateByDegrees: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        const center = { x: canvas.width/2, y: canvas.height/2 };
+        let v = { x: 100, y: 0 };
+        let angle = 15;
+
+        function draw() {
+            clearCanvas(ctx);
+            drawArrow(ctx, center, vector.add(center, v), 'blue');
+            drawArrow(ctx, center, vector.add(center, vector.rotateByDegrees(v, angle)), 'green');
+            
+            drawResults(ctx, [
+                ['Vector', v],
+                ['Angle (deg)', angle],
+                ['Rotated', vector.rotateByDegrees(v, angle)],
+                'Drag blue arrow to adjust vector',
+                'Use +/- to adjust angle'
+            ]);
+        }
+
+        drag({ canvas, draw }, {
+            onDrag: pos => v = vector.subtract(pos, center)
+        });
+
+        key({ canvas, draw }, {
+            '+=': () => angle += 15,
+            '-_': () => angle -= 15
         });
 
         draw();

@@ -88,20 +88,6 @@ export const interpolateInverse = (start: Vector2d, end: Vector2d, point: Vector
 };
 
 /**
- * Moves a point towards a target by a maximum distance
- * @example
- * const current = {x:0, y:0};
- * const target = {x:10, y:0};
- * moveTowards(current, target, 2) // returns {x:2, y:0}
- * moveTowards(current, target, 20) // returns {x:10, y:0}
- */
-export const moveTowards = (current: Vector2d, target: Vector2d, maxDistance: number): Vector2d => {
-  const diff = subtract(target, current);
-  const dist = length(diff);
-  return dist <= maxDistance ? target : add(current, scale(normalize(diff), maxDistance));
-};
-
-/**
  * Reflects a vector off a surface
  * @param vector The incoming vector (like velocity)
  * @param normal The normalized surface normal
@@ -139,3 +125,32 @@ export const fromAngleRadians = (angleRadians: number, length: number): Vector2d
  */
 export const fromAngleDegrees = (angleDegrees: number, length: number): Vector2d => 
     fromAngleRadians(angleDegrees * Math.PI / 180, length);
+
+/**
+ * Rotates a vector by an angle in radians
+ * @param v Vector to rotate
+ * @param angleRadians Angle in radians to rotate by (positive = clockwise)
+ * @example
+ * const v = {x:1, y:0};
+ * rotateByRadians(v, Math.PI/2) // returns {x:0, y:1}
+ */
+export const rotateByRadians = (v: Vector2d, angleRadians: number): Vector2d => {
+    const cos = Math.cos(angleRadians);
+    const sin = Math.sin(angleRadians);
+    return {
+        x: v.x * cos - v.y * sin,
+        y: v.x * sin + v.y * cos
+    };
+};
+
+/**
+ * Rotates a vector by an angle in degrees
+ * @param v Vector to rotate
+ * @param angleDegrees Angle in degrees to rotate by (positive = clockwise)
+ * @example
+ * const v = {x:1, y:0};
+ * rotateByDegrees(v, 90) // returns {x:0, y:1}
+ */
+export const rotateByDegrees = (v: Vector2d, angleDegrees: number): Vector2d =>
+    rotateByRadians(v, angleDegrees * Math.PI / 180);
+

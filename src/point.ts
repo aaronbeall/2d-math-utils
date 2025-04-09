@@ -111,3 +111,26 @@ export const isPointInLine = (point: Point, line: Line, width: number = 1): bool
 
   return distToLine <= width / 2;
 };
+
+/**
+ * Moves a point towards a target by a maximum distance
+ * @example
+ * const current = {x:0, y:0};
+ * const target = {x:10, y:0};
+ * moveTowards(current, target, 2) // returns {x:2, y:0}
+ * moveTowards(current, target, 20) // returns {x:10, y:0}
+ */
+export const moveTowards = (current: Point, target: Point, maxDistance: number): Point => {
+  if (maxDistance <= 0) return current;
+  
+  const dx = target.x - current.x;
+  const dy = target.y - current.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  
+  if (dist <= maxDistance || dist === 0) return target;
+  
+  return {
+    x: current.x + (dx / dist) * maxDistance,
+    y: current.y + (dy / dist) * maxDistance
+  };
+};
