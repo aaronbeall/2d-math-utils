@@ -137,7 +137,7 @@ export function drag({ canvas, draw }: HandlerContext, handlers: DragHandler) {
 
     canvas.addEventListener('mousedown', (e) => {
         isDragging = true;
-        handlers.onStart?.(getMousePos(canvas, e));
+        handlers.onStart?.(getMousePos(canvas, e)) ?? handlers.onDrag?.(getMousePos(canvas, e));
         draw?.();
     });
 

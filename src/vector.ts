@@ -80,7 +80,7 @@ export const interpolate = (start: Vector2d, end: Vector2d, t: number): Vector2d
  * Inverse linear interpolation - returns how far along the interpolation a point is
  * @returns Value between 0-1 representing position between start and end
  */
-export const inverseInterpolation = (start: Vector2d, end: Vector2d, point: Vector2d): number => {
+export const interpolateInverse = (start: Vector2d, end: Vector2d, point: Vector2d): number => {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const dp = subtract(point, start);

@@ -97,12 +97,12 @@ describe('vector', () => {
 
     it('finds interpolation position', () => {
       const point = { x: 5, y: 5 };
-      expect(vector.inverseInterpolation(start, end, point)).toBeCloseTo(0.5);
+      expect(vector.interpolateInverse(start, end, point)).toBeCloseTo(0.5);
     });
 
     it('clamps result to 0-1', () => {
-      expect(vector.inverseInterpolation(start, end, { x: -5, y: -5 })).toBe(0);
-      expect(vector.inverseInterpolation(start, end, { x: 15, y: 15 })).toBe(1);
+      expect(vector.interpolateInverse(start, end, { x: -5, y: -5 })).toBe(0);
+      expect(vector.interpolateInverse(start, end, { x: 15, y: 15 })).toBe(1);
     });
   });
 
