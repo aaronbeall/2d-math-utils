@@ -74,6 +74,40 @@ export const pointDemos: Record<keyof typeof point, DemoFunction> = {
         draw();
     },
 
+    closest: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        let points: Point[] = [];
+        let mousePos = { x: 0, y: 0 };
+
+        function generatePoints() {
+            points = Array.from({ length: 10 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height
+            }));
+        }
+
+        function draw() {
+            clearCanvas(ctx);
+            const closest = point.closest(mousePos, points);
+            
+            points.forEach(p => {
+                drawPoint(ctx, p, p === closest ? 'red' : 'blue');
+            });
+
+            drawResults(ctx, [
+                ['Mouse', mousePos],
+                ['Closest', closest],
+                'Click to generate new points'
+            ]);
+        }
+
+        click({ canvas, draw }, () => generatePoints());
+        move({ canvas, draw }, pos => mousePos = pos);
+        
+        generatePoints();
+        draw();
+    },
+
     isPointInCircle: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         let circle = { x: 200, y: 200, radius: 50 };

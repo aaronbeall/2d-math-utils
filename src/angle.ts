@@ -78,10 +78,10 @@ export const degreesBetweenPoints = (p1: Point, p2: Point): number => {
 /**
  * Calculates smallest angle between two angles in degrees
  * @example
- * degreesBetween(350, 10) // returns 20 (not 340)
- * degreesBetween(0, 180) // returns 180
+ * degreesBetweenAngles(350, 10) // returns 20 (not 340)
+ * degreesBetweenAngles(0, 180) // returns 180
  */
-export const degreesBetween = (degrees1: number, degrees2: number): number => {
+export const degreesBetweenAngles = (degrees1: number, degrees2: number): number => {
   const radians1 = degreesToRadians(degrees1);
   const radians2 = degreesToRadians(degrees2);
   const diff = radians2 - radians1;
@@ -91,9 +91,9 @@ export const degreesBetween = (degrees1: number, degrees2: number): number => {
 /**
  * Calculates smallest angle between two angles in radians
  * @example
- * radiansBetween(2*Math.PI-0.1, 0.1) // returns 0.2 (not 2*Math.PI-0.2)
+ * radiansBetweenAngles(2*Math.PI-0.1, 0.1) // returns 0.2 (not 2*Math.PI-0.2)
  */
-export const radiansBetween = (radians1: number, radians2: number): number => {
+export const radiansBetweenAngles = (radians1: number, radians2: number): number => {
   const diff = radians2 - radians1;
   return Math.atan2(Math.sin(diff), Math.cos(diff));
 }
@@ -103,16 +103,15 @@ export const radiansBetween = (radians1: number, radians2: number): number => {
  * @example
  * const point = {x:2, y:0};
  * const center = {x:0, y:0};
- * rotateAroundByRadians(point, center, Math.PI/2) // returns {x:0, y:2}
+ * rotateAroundByRadians(center, point, Math.PI/2) // returns {x:0, y:2}
  */
-export const rotateAroundByRadians = (point: Point, center: Point, angleRadians: number): Point => {
-  const angleToTarget = radiansBetweenPoints(point, center);
-  const newAngle = angleToTarget + angleRadians;
-  const distanceToTarget = distance(point, center);
+export const rotateAroundByRadians = (center: Point, point: Point, angleRadians: number): Point => {
+  const angleToTarget = radiansBetweenPoints(center, point);
+  const distanceToTarget = distance(center, point);
 
   return {
-    x: point.x + Math.cos(newAngle) * distanceToTarget,
-    y: point.y + Math.sin(newAngle) * distanceToTarget,
+    x: center.x + Math.cos(angleToTarget + angleRadians) * distanceToTarget,
+    y: center.y + Math.sin(angleToTarget + angleRadians) * distanceToTarget,
   };
 }
 
@@ -123,8 +122,8 @@ export const rotateAroundByRadians = (point: Point, center: Point, angleRadians:
  * const center = {x:0, y:0};
  * rotateAroundByDegrees(point, center, 90) // returns {x:0, y:1}
  */
-export const rotateAroundByDegrees = (point: Point, center: Point, angleDegrees: number): Point => {
-  return rotateAroundByRadians(point, center, degreesToRadians(angleDegrees));
+export const rotateAroundByDegrees = (center: Point, point: Point, angleDegrees: number): Point => {
+  return rotateAroundByRadians(center, point, degreesToRadians(angleDegrees));
 }
 
 /**

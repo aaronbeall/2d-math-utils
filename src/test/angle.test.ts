@@ -63,17 +63,17 @@ describe('angle', () => {
 
   describe('degreesBetween', () => {
     it('finds shortest angle between degrees', () => {
-      expect(angle.degreesBetween(0, 90)).toBeCloseTo(90);
-      expect(angle.degreesBetween(350, 10)).toBeCloseTo(20);
-      expect(angle.degreesBetween(0, 180)).toBeCloseTo(180);
-      expect(angle.degreesBetween(90, 270)).toBeCloseTo(180);
+      expect(angle.degreesBetweenAngles(0, 90)).toBeCloseTo(90);
+      expect(angle.degreesBetweenAngles(350, 10)).toBeCloseTo(20);
+      expect(angle.degreesBetweenAngles(0, 180)).toBeCloseTo(180);
+      expect(angle.degreesBetweenAngles(90, 270)).toBeCloseTo(180);
     });
   });
 
   describe('radiansBetween', () => {
     it('finds shortest angle between radians', () => {
-      expect(angle.radiansBetween(0, Math.PI/2)).toBeCloseTo(Math.PI/2);
-      expect(angle.radiansBetween(2*Math.PI-0.1, 0.1)).toBeCloseTo(0.2);
+      expect(angle.radiansBetweenAngles(0, Math.PI/2)).toBeCloseTo(Math.PI/2);
+      expect(angle.radiansBetweenAngles(2*Math.PI-0.1, 0.1)).toBeCloseTo(0.2);
     });
   });
 

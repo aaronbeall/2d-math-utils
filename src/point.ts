@@ -39,6 +39,22 @@ export const midpoint = (p1: Point, p2: Point): Point => ({
 });
 
 /**
+ * Finds the closest point from a list of points
+ * @example
+ * const target = { x: 0, y: 0 };
+ * const points = [{ x: 1, y: 1 }, { x: 2, y: 2 }];
+ * closest(target, points) // returns { x: 1, y: 1 }
+ */
+export const closest = (target: Point, points: Point[]): Point => {
+    if (!points.length) throw new Error('Points array is empty');
+    return points.reduce((closest, point) => 
+        distanceSquared(target, point) < distanceSquared(target, closest) 
+            ? point 
+            : closest
+    );
+};
+
+/**
  * Checks if a point is inside a circle
  * @example
  * const circle = { x: 0, y: 0, radius: 5 };

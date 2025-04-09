@@ -40,9 +40,9 @@ export const scale = (v: Vector2d, scalar: number): Vector2d => ({
 /**
  * Calculates length of vector
  * @example
- * magnitude({x:3,y:4}) // returns 5
+ * length({x:3,y:4}) // returns 5
  */
-export const magnitude = (v: Vector2d): number => 
+export const length = (v: Vector2d): number => 
   Math.sqrt(v.x * v.x + v.y * v.y);
 
 /**
@@ -51,18 +51,18 @@ export const magnitude = (v: Vector2d): number =>
  * normalize({x:3,y:4}) // returns {x:0.6,y:0.8}
  */
 export const normalize = (v: Vector2d): Vector2d => {
-  const mag = magnitude(v);
-  return mag === 0 ? zero() : scale(v, 1 / mag);
+  const len = length(v);
+  return len === 0 ? zero() : scale(v, 1 / len);
 };
 
 /**
  * Limits vector length while preserving direction
  * @example
- * clampMagnitude({x:3,y:4}, 2) // returns {x:1.2,y:1.6}
+ * clampLength({x:3,y:4}, 2) // returns {x:1.2,y:1.6}
  */
-export const clampMagnitude = (v: Vector2d, maxLength: number): Vector2d => {
-  const mag = magnitude(v);
-  return mag > maxLength ? scale(normalize(v), maxLength) : v;
+export const clampLength = (v: Vector2d, maxLength: number): Vector2d => {
+  const len = length(v);
+  return len > maxLength ? scale(normalize(v), maxLength) : v;
 };
 
 /**
@@ -97,7 +97,7 @@ export const inverseInterpolation = (start: Vector2d, end: Vector2d, point: Vect
  */
 export const moveTowards = (current: Vector2d, target: Vector2d, maxDistance: number): Vector2d => {
   const diff = subtract(target, current);
-  const dist = magnitude(diff);
+  const dist = length(diff);
   return dist <= maxDistance ? target : add(current, scale(normalize(diff), maxDistance));
 };
 
@@ -117,3 +117,25 @@ export const reflect = (vector: Vector2d, normal: Vector2d): Vector2d => {
     y: vector.y - dot * normal.y
   };
 };
+
+/**
+ * Creates a vector from an angle and length
+ * @param angleRadians Angle in radians (0 = right, π/2 = down)
+ * @param length Length of resulting vector
+ * @example
+ * fromAngleRadians(Math.PI/2, 5) // returns {x:0, y:5} (pointing down with length 5)
+ */
+export const fromAngleRadians = (angleRadians: number, length: number): Vector2d => ({
+    x: Math.cos(angleRadians) * length,
+    y: Math.sin(angleRadians) * length
+});
+
+/**
+ * Creates a vector from an angle in degrees and length
+ * @param angleDegrees Angle in degrees (0 = right, 90 = down)
+ * @param length Length of resulting vector
+ * @example
+ * fromAngleDegrees(90, 5) // returns {x:0, y:5} (pointing down with length 5)
+ */
+export const fromAngleDegrees = (angleDegrees: number, length: number): Vector2d => 
+    fromAngleRadians(angleDegrees * Math.PI / 180, length);

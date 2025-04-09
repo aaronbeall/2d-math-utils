@@ -79,26 +79,30 @@ export function drawText(ctx: CanvasRenderingContext2D, text: string, x: number,
 type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line;
 type ResultEntry = string | [string, ResultValue];
 
-function formatValue(value: ResultValue, precision = 0): string {
-    if (typeof value === 'boolean') {
-        return value ? '✅ Yes' : '❌ No';
+function formatValue(value: ResultValue, precision = 2): string {
+    const num = (n: number) => n.toFixed(precision);
+    
+    if (typeof value === 'number') {
+        return num(value);
     }
     if (typeof value === 'string') {
         return value;
     }
-    if (typeof value === 'number') {
-        return value.toFixed(precision);
+    if (typeof value === 'boolean') {
+        return value ? '✅ Yes' : '❌ No';
     }
     if ('radius' in value) {
-        return `(${value.x.toFixed(0)}, ${value.y.toFixed(0)}, r=${value.radius.toFixed(0)})`;
+        return `(${num(value.x)}, ${num(value.y)}, r=${num(value.radius)})`;
     }
     if ('width' in value) {
-        return `(${value.x.toFixed(0)}, ${value.y.toFixed(0)}) [${value.width.toFixed(0)}×${value.height.toFixed(0)}]`;
+        return `(${num(value.x)}, ${num(value.y)}) [${num(value.width)}×${num(value.height)}]`;
     }
     if ('start' in value) {
-        return `(${value.start.x.toFixed(0)}, ${value.start.y.toFixed(0)}) → (${value.end.x.toFixed(0)}, ${value.end.y.toFixed(0)})`;
+        const start = `${num(value.start.x)}, ${num(value.start.y)}`;
+        const end = `${num(value.end.x)}, ${num(value.end.y)}`;
+        return `(${start}) → (${end})`;
     }
-    return `(${value.x.toFixed(0)}, ${value.y.toFixed(0)})`;
+    return `(${num(value.x)}, ${num(value.y)})`;
 }
 
 export function drawResults(
@@ -107,7 +111,7 @@ export function drawResults(
     x = 10, 
     y = 20, 
     spacing = 20,
-    precision = 0
+    precision = 2
 ) {
     results.forEach((entry, i) => {
         const text = Array.isArray(entry)
@@ -194,4 +198,22 @@ export function key({ canvas, draw }: HandlerContext, mappings: Record<string, (
     canvas.focus();
     canvas.addEventListener('keydown', handler);
     return () => canvas.removeEventListener('keydown', handler);
+}
+
+export function animate(draw: () => void, step?: () => void) {
+    let animationFrameId: number;
+    let isRunning = true;
+
+    function loop() {
+        if (!isRunning) return;
+        step?.();
+        draw();
+        animationFrameId = requestAnimationFrame(loop);
+    }
+
+    loop();
+    return () => {
+        isRunning = false;
+        cancelAnimationFrame(animationFrameId);
+    };
 }
