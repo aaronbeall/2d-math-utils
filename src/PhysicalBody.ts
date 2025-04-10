@@ -1,45 +1,54 @@
 import { Point, Vector2d } from './types';
 import * as vector from './vector';
 import * as physics from './physics';
+import { distance } from './point';
 
-
+/**
+ * PhysicalBody class for simulating physical objects in 2D space.
+ * 
+ * It can be used for both top-down and side-view games.
+ * 
+ * This class is a referance implementation for a 2D physics simulation.
+ */
 export class PhysicalBody {
+  /** Default downward gravity for 2D side-view games */
+  static DOWNWARD_GRAVITY: Vector2d = { x: 0, y: 980 };
 
-  static DOWNWARD_GRAVITY: Vector2d = { x: 0, y: 980 }; // Gravity vector (downward)
+  /** General Properties (useful in all scenarios) */
+  x: number = 0;               // Current x position
+  y: number = 0;               // Current y position
+  velocity: Vector2d = vector.zero();      // Current movement speed & direction
+  acceleration: Vector2d = vector.zero();  // Current change in velocity
+  mass: number = 1;            // Mass affects force response & collisions
+  radius: number = 0;          // Collision radius
+  elasticity: number = 0.8;    // Bounce factor (0 = stop, 1 = perfect bounce)
 
-  x: number = 0;
-  y: number = 0;
-  velocity: Vector2d = vector.zero();
-  acceleration: Vector2d = vector.zero();
-  angle: number = 0;
-  angularVelocity: number = 0;
-  mass: number = 1;
-  drag: number = 0;
-  angularDrag: number = 0;
-  elasticity: number = 0.8; // 0 = no bounce, 1 = full bounce
-  radius: number = 0;
-  gravity: Vector2d = vector.zero();
+  /** Top-Down Properties (for top-down games like tanks, racing) */
+  angle: number = 0;           // Rotation angle in radians
+  angularVelocity: number = 0; // Speed of rotation
+  angularDrag: number = 0;     // Rotation damping
+  friction: number = 0;  // Ground friction (0 = slide forever, 1 = instant stop)
+
+  /** Side-View Properties (for platformers, physics games) */
+  gravity: Vector2d = vector.zero();  // Gravity force vector
+  drag: number = 0;   // Air drag (0 = none, 1 = instant stop)
 
   constructor(props: Partial<PhysicalBody> = {}) {
     Object.assign(this, props);
   }
 
-  /**
-   * position: Current location (changes by velocity)
-   * velocity: Rate of position change (changes by acceleration)
-   * acceleration: Rate of velocity change (from forces)
-   * Example: 
-   * - position: x=10 means "10 units from origin"
-   * - velocity: x=5 means "moving 5 units per second"
-   * - acceleration: x=2 means "velocity increases by 2 per second"
-   */
   update(deltaTime: number) {
     // Apply gravity with mass
     this.applyForce(vector.scale(this.gravity, this.mass));
     
-    // Apply drag
+    // Apply ground friction for top-down movement
+    if (this.friction > 0) {
+      this.velocity = vector.scale(this.velocity, 1 - this.friction);
+    }
+
+    // Apply air resistance for side-view movement
     if (this.drag > 0) {
-      this.applyForce(vector.scale(this.velocity, 1 - this.drag * deltaTime));
+      this.velocity = vector.scale(this.velocity, 1 - this.drag);
     }
 
     // Update velocity with acceleration
@@ -67,7 +76,7 @@ export class PhysicalBody {
    * @param force The force vector to apply
    */
   applyForce(force: Vector2d) {
-    this.acceleration = physics.applyForce(this.acceleration, force, this.mass);
+    physics.applyVectorForce(this.acceleration, force, this.mass);
   }
 
   /**
@@ -76,7 +85,7 @@ export class PhysicalBody {
    * @param impulse The impulse vector (mass * velocity change)
    */
   applyImpulse(impulse: Vector2d) {
-    this.velocity = physics.applyForce(this.velocity, impulse, this.mass);
+    physics.applyVectorForce(this.velocity, impulse, this.mass);
   }
 
   /**
@@ -91,13 +100,16 @@ export class PhysicalBody {
    * Applies a continuous forward force in the direction of angle
    * Example: Rocket engine, car acceleration
    */
-  thrust(force: number, angle: number = this.angle) {
-    this.velocity = physics.applyThrust(this.velocity, force, angle, this.mass);
+  applyThrust(force: number, angle: number = this.angle) {
+    physics.applyVectorForceAngle(this.acceleration, angle, force, this.mass);
   }
 
   collideWithBody(other: PhysicalBody): boolean {
-    const distance = vector.length(vector.subtract(other.position, this.position));
-    if (distance > this.radius + other.radius) return false;
+    const dist = distance(other.position, this.position);
+    if (dist > this.radius + other.radius) return false;
+
+    // Calculate combined restitution (multiply elasticities)
+    const restitution = this.elasticity * other.elasticity;
 
     // Calculate and apply collision response
     const [cv1, cv2] = physics.collide(
@@ -106,11 +118,12 @@ export class PhysicalBody {
       this.position,
       other.position,
       this.mass,
-      other.mass
+      other.mass,
+      restitution
     );
 
-    this.velocity = vector.scale(cv1, this.elasticity);
-    other.velocity = vector.scale(cv2, other.elasticity);
+    this.velocity = cv1;
+    other.velocity = cv2;
 
     return true;
   }
@@ -143,19 +156,5 @@ export class PhysicalBody {
   set position(value: Vector2d) {
     this.x = value.x;
     this.y = value.y;
-  }
-
-  get forward(): Vector2d {
-    return {
-      x: Math.cos(this.angle),
-      y: Math.sin(this.angle)
-    };
-  }
-
-  get right(): Vector2d {
-    return {
-      x: Math.cos(this.angle + Math.PI / 2),
-      y: Math.sin(this.angle + Math.PI / 2)
-    };
   }
 }

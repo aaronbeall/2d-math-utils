@@ -77,7 +77,7 @@ export function drawText(ctx: CanvasRenderingContext2D, text: string, x: number,
 }
 
 type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line;
-type ResultEntry = string | [string, ResultValue];
+type ResultEntry = string | [label: string, value: ResultValue, color?: string];
 
 function formatValue(value: ResultValue, precision = 2): string {
     const num = (n: number) => n.toFixed(precision);
@@ -117,7 +117,7 @@ export function drawResults(
         const text = Array.isArray(entry)
             ? `${entry[0]}: ${formatValue(entry[1], precision)}`
             : entry;
-        drawText(ctx, text, x, y + i * spacing);
+        drawText(ctx, text, x, y + i * spacing, Array.isArray(entry) ? entry[2] : undefined);
     });
 }
 

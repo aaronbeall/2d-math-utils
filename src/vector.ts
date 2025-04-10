@@ -88,20 +88,21 @@ export const interpolateInverse = (start: Vector2d, end: Vector2d, point: Vector
 };
 
 /**
- * Reflects a vector off a surface
- * @param vector The incoming vector (like velocity)
- * @param normal The normalized surface normal
+ * Reflects a vector off a surface using formula R = V - 2(V·N)N
+ * @param vector The incoming vector V (like velocity)
+ * @param normal The normalized surface normal N
  * @example
  * const velocity = {x:1, y:1};
  * const wallNormal = {x:1, y:0};
  * reflect(velocity, wallNormal) // returns {x:-1, y:1}
  */
 export const reflect = (vector: Vector2d, normal: Vector2d): Vector2d => {
-  const dot = 2 * (vector.x * normal.x + vector.y * normal.y);
-  return {
-    x: vector.x - dot * normal.x,
-    y: vector.y - dot * normal.y
-  };
+    // Using reflection formula R = V - 2(V·N)N
+    const dotProduct = 2 * dot(vector, normal); // 2(V·N)
+    return {
+        x: vector.x - dotProduct * normal.x,
+        y: vector.y - dotProduct * normal.y
+    };
 };
 
 /**

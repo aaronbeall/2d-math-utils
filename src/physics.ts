@@ -1,68 +1,44 @@
 import { distanceSquared } from "./point";
-import { Vector2d } from "./types";
-import { add, normalize, scale, subtract } from "./vector";
+import { Point, Vector2d } from "./types";
+import { add, dot, fromAngleRadians, normalize, scale, subtract } from "./vector";
 
 /**
- * Applies a force to an object's acceleration or velocity vector
- * @param vector Current acceleration vector
- * @param force Force vector to apply
- * @param mass Object's mass (affects force impact)
- * @returns New acceleration vector
- * 
- * @example
- * // Apply gravity
- * obj.acceleration = applyForce(
- *   obj.acceleration,
- *   { x: 0, y: 9.81 },
- *   obj.mass
- * );
+ * Modifies velocity/acceleration/position vector by applying a force
+ * @param vector Vector to modify
+ * @param force Force to apply
+ * @param scaler Object mass (affects force impact) or time scale
  */
-export const applyForce = (vector: Vector2d, force: Vector2d, mass: number): Vector2d => {
-  return add(vector, scale(force, 1 / mass));
+export const applyVectorForce = (vector: Vector2d, force: Vector2d, scaler: number = 1): void => {
+    vector.x += force.x / scaler;
+    vector.y += force.y / scaler;
 };
 
 /**
- * Applies rotational force to change angular velocity
- * @param angularVelocity Current angular velocity
- * @param torque Amount of rotational force
- * @param mass Object's mass (affects rotation)
- * @returns New angular velocity
- * 
- * @example
- * // Rotate clockwise
- * obj.angularVelocity = applyTorque(
- *   obj.angularVelocity,
- *   -5, // negative = clockwise
- *   obj.mass
- * );
+ * Modifies velocity/acceleration vector by applying friction (direct velocity reduction)
+ * @param vector Vector to modify (like velocity)
+ * @param damping Amount of friction (0 = no friction, 1 = full stop)
  */
-export const applyTorque = (angularVelocity: number, torque: number, mass: number): number => {
-  return angularVelocity + (torque / mass);
+export const applyVectorDamping = (vector: Vector2d, damping: number): void => {
+    vector.x *= (1 - damping);
+    vector.y *= (1 - damping);
 };
 
 /**
- * Applies force in direction of angle
- * @param vector Current acceleration vector
- * @param force Magnitude of thrust
- * @param angle Direction of thrust in radians
- * @param mass Object's mass
- * @returns New acceleration vector
- * 
- * @example
- * // Rocket thrust
- * obj.acceleration = applyThrust(
- *   obj.acceleration,
- *   100,         // thrust power
- *   obj.angle,   // rocket's angle
- *   obj.mass
- * );
+ * Modifies angular velocity by applying torque
  */
-export const applyThrust = (vector: Vector2d, force: number, angle: number, mass: number): Vector2d => {
-  const thrustVector = { 
-    x: Math.cos(angle) * force,
-    y: Math.sin(angle) * force
-  };
-  return applyForce(vector, thrustVector, mass);
+export const applyTorque = (angularVelocity: number, torque: number, scaler: number = 1): number => {
+    return angularVelocity + torque / scaler;
+};
+
+/**
+ * Modifies velocity vector by applying force in direction of angle
+ */
+export const applyVectorForceAngle = (vector: Vector2d, angle: number, force: number, scaler: number = 1): void => {
+    applyVectorForce(
+      vector, 
+      fromAngleRadians(angle, force), 
+      scaler
+    );
 };
 
 /**
@@ -90,19 +66,24 @@ export const collide = (
   v1: Vector2d, 
   v2: Vector2d, 
   p1: Vector2d, 
-  p2: Vector2d, 
+  p2: Vector2d,
   mass1: number = 1, 
   mass2: number = 1,
-  restitution = 0.9 // Bouncy factor (1 = perfect elastic)
+  restitution = 0.9
 ): [Vector2d, Vector2d] => {
-  // Get collision normal
+  // Get collision normal and overlap amount
   const normal = normalize(subtract(p2, p1));
   
   // Get relative velocity
   const relativeVelocity = subtract(v2, v1);
   
+  // Check if objects are moving toward each other
+  const velocityAlongNormal = dot(relativeVelocity, normal);
+  if (velocityAlongNormal > 0) {
+    return [v1, v2]; // Objects moving apart, no collision needed
+  }
+
   // Calculate impulse
-  const velocityAlongNormal = (relativeVelocity.x * normal.x + relativeVelocity.y * normal.y);
   const j = -(1 + restitution) * velocityAlongNormal;
   const impulse = j / (1/mass1 + 1/mass2);
   

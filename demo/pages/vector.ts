@@ -310,7 +310,7 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
             drawArrow(ctx, center, vector.add(center, normalVec), 'blue');
             
             // Draw incoming vector
-            drawArrow(ctx, center, vector.add(center, velocity), 'red');
+            drawArrow(ctx, vector.add(center, velocity), center, 'red');
             
             // Draw reflected vector
             const reflected = vector.reflect(velocity, vector.normalize(normal));
