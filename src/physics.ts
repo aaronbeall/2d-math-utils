@@ -8,9 +8,9 @@ import { add, dot, fromAngleRadians, normalize, scale, subtract } from "./vector
  * @param force Force to apply
  * @param scaler Object mass (affects force impact) or time scale
  */
-export const applyVectorForce = (vector: Vector2d, force: Vector2d, scaler: number = 1): void => {
-    vector.x += force.x / scaler;
-    vector.y += force.y / scaler;
+export const applyForce = (vector: Vector2d, force: Vector2d, scaler: number = 1): void => {
+    vector.x += force.x * scaler;
+    vector.y += force.y * scaler;
 };
 
 /**
@@ -18,7 +18,7 @@ export const applyVectorForce = (vector: Vector2d, force: Vector2d, scaler: numb
  * @param vector Vector to modify (like velocity)
  * @param damping Amount of friction (0 = no friction, 1 = full stop)
  */
-export const applyVectorDamping = (vector: Vector2d, damping: number): void => {
+export const applyDamping = (vector: Vector2d, damping: number): void => {
     vector.x *= (1 - damping);
     vector.y *= (1 - damping);
 };
@@ -27,14 +27,14 @@ export const applyVectorDamping = (vector: Vector2d, damping: number): void => {
  * Modifies angular velocity by applying torque
  */
 export const applyTorque = (angularVelocity: number, torque: number, scaler: number = 1): number => {
-    return angularVelocity + torque / scaler;
+    return angularVelocity + torque * scaler;
 };
 
 /**
  * Modifies velocity vector by applying force in direction of angle
  */
-export const applyVectorForceAngle = (vector: Vector2d, angle: number, force: number, scaler: number = 1): void => {
-    applyVectorForce(
+export const applyAngleForce = (vector: Vector2d, angle: number, force: number, scaler: number = 1): void => {
+    applyForce(
       vector, 
       fromAngleRadians(angle, force), 
       scaler

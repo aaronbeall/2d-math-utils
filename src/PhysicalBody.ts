@@ -1,4 +1,4 @@
-import { Point, Vector2d } from './types';
+import { Circle, Point, Vector2d } from './types';
 import * as vector from './vector';
 import * as physics from './physics';
 import { distance } from './point';
@@ -15,8 +15,7 @@ export class PhysicalBody {
   static DOWNWARD_GRAVITY: Vector2d = { x: 0, y: 980 };
 
   /** General Properties (useful in all scenarios) */
-  x: number = 0;               // Current x position
-  y: number = 0;               // Current y position
+  position: Point = { x: 0, y: 0 }; // Current position in world space
   velocity: Vector2d = vector.zero();      // Current movement speed & direction
   acceleration: Vector2d = vector.zero();  // Current change in velocity
   mass: number = 1;            // Mass affects force response & collisions
@@ -38,31 +37,31 @@ export class PhysicalBody {
   }
 
   update(deltaTime: number) {
-    // Apply gravity with mass
-    this.applyForce(vector.scale(this.gravity, this.mass));
+    // Apply gravity directly as acceleration (no mass needed)
+    physics.applyForce(this.acceleration, this.gravity);
     
     // Apply ground friction for top-down movement
     if (this.friction > 0) {
-      this.velocity = vector.scale(this.velocity, 1 - this.friction);
+      physics.applyDamping(this.velocity, this.friction);
     }
 
     // Apply air resistance for side-view movement
     if (this.drag > 0) {
-      this.velocity = vector.scale(this.velocity, 1 - this.drag);
+      physics.applyDamping(this.velocity, this.drag);
     }
 
     // Update velocity with acceleration
-    this.velocity = vector.add(this.velocity, vector.scale(this.acceleration, deltaTime));
+    physics.applyForce(this.velocity, this.acceleration, deltaTime);
 
     // Update position with velocity
-    this.position = vector.add(this.position, vector.scale(this.velocity, deltaTime));
+    physics.applyForce(this.position, this.velocity, deltaTime);
     
     // Update angle with angular velocity
     this.angle += this.angularVelocity * deltaTime;
     
     // Apply angular drag
     if (this.angularDrag > 0) {
-      this.angularVelocity *= (1 - this.angularDrag * deltaTime);
+      this.angularVelocity = physics.applyTorque(this.angularVelocity, this.angularVelocity, 1 / this.mass);
     }
 
     // Reset forces
@@ -76,7 +75,7 @@ export class PhysicalBody {
    * @param force The force vector to apply
    */
   applyForce(force: Vector2d) {
-    physics.applyVectorForce(this.acceleration, force, this.mass);
+    physics.applyForce(this.acceleration, force, 1 / this.mass);
   }
 
   /**
@@ -85,7 +84,7 @@ export class PhysicalBody {
    * @param impulse The impulse vector (mass * velocity change)
    */
   applyImpulse(impulse: Vector2d) {
-    physics.applyVectorForce(this.velocity, impulse, this.mass);
+    physics.applyForce(this.velocity, impulse, 1 / this.mass);
   }
 
   /**
@@ -93,7 +92,7 @@ export class PhysicalBody {
    * Example: Steering torque, wind rotation
    */
   applyTorque(torque: number) {
-    this.angularVelocity = physics.applyTorque(this.angularVelocity, torque, this.mass);
+    this.angularVelocity = physics.applyTorque(this.angularVelocity, torque, 1 / this.mass);
   }
 
   /**
@@ -101,7 +100,7 @@ export class PhysicalBody {
    * Example: Rocket engine, car acceleration
    */
   applyThrust(force: number, angle: number = this.angle) {
-    physics.applyVectorForceAngle(this.acceleration, angle, force, this.mass);
+    physics.applyAngleForce(this.acceleration, angle, force, this.mass);
   }
 
   collideWithBody(other: PhysicalBody): boolean {
@@ -149,12 +148,11 @@ export class PhysicalBody {
     );
   }
 
-  get position(): Vector2d {
-    return { x: this.x, y: this.y };
-  }
+  // Getters and Setters for x position
+  get x() { return this.position.x; }
+  set x(value: number) { this.position.x = value; }
 
-  set position(value: Vector2d) {
-    this.x = value.x;
-    this.y = value.y;
-  }
+  // Getters and Setters for y position
+  get y() { return this.position.y; }
+  set y(value: number) { this.position.y = value; }
 }
