@@ -504,5 +504,48 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
         });
 
         draw();
+    },
+
+    dot: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        const center = { x: canvas.width / 2, y: canvas.height / 2 };
+        let v1 = { x: 100, y: 0 };
+        let v2 = { x: 0, y: 100 };
+
+        function draw() {
+            clearCanvas(ctx);
+
+            // Draw vectors
+            drawArrow(ctx, center, vector.add(center, v1), 'blue');
+            drawArrow(ctx, center, vector.add(center, v2), 'red');
+
+            // Calculate dot product
+            const dotProduct = vector.dot(v1, v2);
+
+            // Calculate projection of v1 onto v2
+            const projectionScale = dotProduct / (vector.length(v1) * vector.length(v2));
+            const projection = vector.scale(v2, projectionScale);
+            drawArrow(ctx, center, vector.add(center, projection), 'green');
+
+            drawResults(ctx, [
+                ['Vector 1', v1],
+                ['Vector 2', v2],
+                ['Dot Product', dotProduct],
+                ['Projection of v1 onto v2', projection],
+                'Drag blue/red arrows to adjust vectors'
+            ]);
+        }
+
+        drag({ canvas, draw }, {
+            onDrag: (pos) => {
+                const end1 = vector.add(center, v1);
+                const end2 = vector.add(center, v2);
+                const closest = point.closest(pos, [end1, end2]);
+                if (closest === end1) v1 = vector.subtract(pos, center);
+                else v2 = vector.subtract(pos, center);
+            }
+        });
+
+        draw();
     }
 };
