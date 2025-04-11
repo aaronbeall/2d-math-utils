@@ -352,7 +352,6 @@ export const bodyDemos: Record<string, DemoFunction> = {
         const ctx = canvas.getContext('2d')!;
         
         class Spaceship extends PhysicalBody {
-            angle = 0;
             thrusting = false;
             
             constructor() {
