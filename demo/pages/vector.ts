@@ -143,6 +143,45 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
         draw();
     },
 
+    normal: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        const center = { x: canvas.width / 2, y: canvas.height / 2 };
+        let p1 = { x: center.x - 100, y: center.y };
+        let p2 = { x: center.x + 100, y: center.y };
+
+        function draw() {
+            clearCanvas(ctx);
+
+            // Draw points and line
+            drawPoint(ctx, p1, 'blue');
+            drawPoint(ctx, p2, 'red');
+            drawLine(ctx, { start: p1, end: p2 }, 'gray');
+
+            // Calculate and draw normal
+            const normalVector = vector.normal(p1, p2);
+            const normalStart = vector.interpolate(p1, p2, 0.5); // Midpoint
+            const normalEnd = vector.add(normalStart, vector.scale(normalVector, 50));
+            drawArrow(ctx, normalStart, normalEnd, 'green');
+
+            drawResults(ctx, [
+                ['Point 1', p1],
+                ['Point 2', p2],
+                ['Normal', normalVector],
+                'Drag blue/red points to adjust'
+            ]);
+        }
+
+        drag({ canvas, draw }, {
+            onDrag: (pos) => {
+                const closest = point.closest(pos, [p1, p2]);
+                if (closest === p1) p1 = pos;
+                else p2 = pos;
+            }
+        });
+
+        draw();
+    },
+
     normalize: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         const center = { x: canvas.width/2, y: canvas.height/2 };

@@ -13,3 +13,4 @@ import { distance } from './point';
 export const lineLength = (line: Line): number => {
   return distance(line.start, line.end);
 };
+

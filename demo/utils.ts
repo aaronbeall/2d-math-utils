@@ -202,10 +202,11 @@ export function key({ canvas, draw }: HandlerContext, mappings: Record<string, (
 
 let currentAnimation: number | null = null;
 
-export function animate(draw: () => void) {
+export function animate(draw: () => void, udpate?: () => void) {
     stop();
 
     function loop() {
+        udpate?.();
         draw();
         currentAnimation = requestAnimationFrame(loop);
     }
@@ -216,13 +217,12 @@ export function animate(draw: () => void) {
 export function simulate(update: (deltaTime: number) => void, draw: () => void) {
     let lastTime = performance.now();
     
-    animate(() => {
+    animate(draw, () => {
         const time = performance.now();
         const deltaTime = Math.min((time - lastTime) / 1000, 0.1); // Cap at 100ms
         lastTime = time;
 
         update(deltaTime);
-        draw();
     });
 }
 

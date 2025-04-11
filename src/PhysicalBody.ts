@@ -104,30 +104,22 @@ export class PhysicalBody {
   }
 
   collideWithBody(other: PhysicalBody): boolean {
+    if (this === other) return false; // Ignore self-collision
+
+    // Check if bodies are overlapping
     const dist = distance(other.position, this.position);
     if (dist > this.radius + other.radius) return false;
 
-    // Calculate combined restitution (multiply elasticities)
+    // Calculate bounciness from combined restitution (multiply elasticities)
     const restitution = this.elasticity * other.elasticity;
 
-    // Calculate and apply collision response
-    const [cv1, cv2] = physics.collide(
-      this.velocity,
-      other.velocity,
-      this.position,
-      other.position,
-      this.mass,
-      other.mass,
-      restitution
-    );
-
-    this.velocity = cv1;
-    other.velocity = cv2;
+    // Resolve collision using physics library
+    physics.collide(this, other, restitution);
 
     return true;
   }
 
-  collideWithSurface(normal: Vector2d, point: Point) {
+  collideWithSurface(point: Point, normal: Vector2d) {
     // Normalize the normal vector
     const n = vector.normalize(normal);
     

@@ -1,4 +1,4 @@
-import { distanceSquared } from "./point";
+import { distance, distanceSquared } from "./point";
 import { Point, Vector2d } from "./types";
 import { add, dot, fromAngleRadians, normalize, scale, subtract } from "./vector";
 
@@ -41,202 +41,127 @@ export const applyAngleForce = (vector: Vector2d, angle: number, force: number, 
     );
 };
 
+interface CollisionObject {
+  position: Vector2d;
+  velocity: Vector2d;
+  mass: number;
+  radius: number;
+}
+
 /**
- * Calculates collision response between two objects using impulse-based collision
- * @param v1 Velocity of first object
- * @param v2 Velocity of second object
- * @param p1 Position of first object
- * @param p2 Position of second object
- * @param mass1 Mass of first object (default: 1)
- * @param mass2 Mass of second object (default: 1)
+ * Calculates collision response between two objects using impulse-based collision.
+ * @param obj1 First object
+ * @param obj2 Second object
  * @param restitution Bounciness factor (1 = perfect elastic, 0 = no bounce)
- * @returns [newV1, newV2] New velocities after collision
- * 
- * @example
- * // Head-on collision between two balls
- * const [v1, v2] = collide(
- *   { x: 5, y: 0 },  // ball1 moving right
- *   { x: -5, y: 0 }, // ball2 moving left
- *   { x: 0, y: 0 },  // ball1 position
- *   { x: 10, y: 0 }, // ball2 position
- *   1, 1, 0.9        // equal mass, high bounce
- * );
+ * @param resolveOverlapMode Mode to resolve overlap ('separate', 'repel', 'none')
  */
 export const collide = (
-  v1: Vector2d, 
-  v2: Vector2d, 
-  p1: Vector2d, 
-  p2: Vector2d,
-  mass1: number = 1, 
-  mass2: number = 1,
-  restitution = 0.9
-): [Vector2d, Vector2d] => {
-  // Get collision normal and overlap amount
-  const normal = normalize(subtract(p2, p1));
-  
-  // Get relative velocity
-  const relativeVelocity = subtract(v2, v1);
-  
+  obj1: CollisionObject,
+  obj2: CollisionObject,
+  restitution = 0.9,
+  resolveOverlapMode: 'separate' | 'repel' | 'none' = 'separate'
+): void => {
+  const normal = normalize(subtract(obj2.position, obj1.position));
+  const relativeVelocity = subtract(obj2.velocity, obj1.velocity);
+
   // Check if objects are moving toward each other
   const velocityAlongNormal = dot(relativeVelocity, normal);
-  if (velocityAlongNormal > 0) {
-    return [v1, v2]; // Objects moving apart, no collision needed
+  if (velocityAlongNormal <= 0) {
+
+    // Calculate impulse
+    const impulseMagnitude = -(1 + restitution) * velocityAlongNormal;
+    const impulse = impulseMagnitude / (1 / obj1.mass + 1 / obj2.mass);
+
+    // Apply impulse
+    const impulseVector = scale(normal, impulse);
+    obj1.velocity = subtract(obj1.velocity, scale(impulseVector, 1 / obj1.mass));
+    obj2.velocity = add(obj2.velocity, scale(impulseVector, 1 / obj2.mass));
   }
 
-  // Calculate impulse
-  const j = -(1 + restitution) * velocityAlongNormal;
-  const impulse = j / (1/mass1 + 1/mass2);
-  
-  // Apply impulse
-  const impulseVector = scale(normal, impulse);
-  return [
-    subtract(v1, scale(impulseVector, 1/mass1)),
-    add(v2, scale(impulseVector, 1/mass2))
-  ];
+  // Handle overlap resolution based on mode
+  if (resolveOverlapMode === 'separate') {
+    separate(obj1, obj2);
+  } else if (resolveOverlapMode === 'repel') {
+    repel(obj1, obj2);
+  }
+};
+
+/**
+ * Resolves overlap between two objects by adjusting their positions.
+ * @param obj1 First object
+ * @param obj2 Second object
+ */
+export const separate = (
+  obj1: CollisionObject,
+  obj2: CollisionObject
+): void => {
+  const normal = subtract(obj2.position, obj1.position);
+  const dist = distance(obj1.position, obj2.position);
+
+  // Check if there is overlap
+  const overlap = obj1.radius + obj2.radius - dist;
+  if (overlap <= 0 || dist === 0) {
+    return; // No overlap or positions are identical
+  }
+
+  // Normalize the direction vector
+  const direction = scale(normal, 1 / dist);
+
+  // Calculate the correction vector
+  const totalMass = obj1.mass + obj2.mass;
+  const correction = scale(direction, overlap);
+
+  // Distribute the correction based on the masses
+  const obj1Correction = scale(correction, obj2.mass / totalMass);
+  const obj2Correction = scale(correction, obj1.mass / totalMass);
+
+  // Adjust the positions of the objects
+  obj1.position = subtract(obj1.position, obj1Correction);
+  obj2.position = add(obj2.position, obj2Correction);
 };
 
 /**
  * Calculates repulsion force between two objects based on their overlap
- * @param p1 Position of first object
- * @param p2 Position of second object
- * @param radius1 Radius of first object
- * @param radius2 Radius of second object
- * @param mass1 Mass of first object (affects force)
- * @param mass2 Mass of second object (affects force)
+ * @param obj1 First object
+ * @param obj2 Second object
  * @param strength Repulsion strength multiplier (default: 1)
- * @returns [force1, force2] Forces to apply to each object
  * 
  * @example
  * // Soft body collision
- * const [f1, f2] = repel(
- *   ball1.position,
- *   ball2.position,
- *   ball1.radius,
- *   ball2.radius,
- *   ball1.mass,
- *   ball2.mass,
+ * repel(
+ *   ball1,
+ *   ball2,
  *   1000 // strong repulsion
  * );
  */
 export const repel = (
-  p1: Vector2d,
-  p2: Vector2d,
-  radius1: number,
-  radius2: number,
-  mass1: number = 1,
-  mass2: number = 1,
+  obj1: CollisionObject,
+  obj2: CollisionObject,
   strength: number = 1
-): [Vector2d, Vector2d] => {
-  const normal = normalize(subtract(p2, p1));
-  const distance = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-  const overlap = (radius1 + radius2) - distance;
-  
-  // Only repel if overlapping
-  if (overlap <= 0) return [{ x: 0, y: 0 }, { x: 0, y: 0 }];
-  
-  // Force increases as objects get closer (inverse square)
-  const forceMagnitude = (strength * mass1 * mass2 * overlap) / (distance * distance);
-  const force = scale(normal, forceMagnitude);
-  
-  return [
-    scale(force, -1), // Force on object 1 (away from object 2)
-    force             // Force on object 2 (away from object 1)
-  ];
-};
+): void => {
+  const normal = subtract(obj2.position, obj1.position);
+  const dist = distance(obj1.position, obj2.position);
+  const overlap = obj1.radius + obj2.radius - dist;
 
-/**
- * Resolves collisions between multiple objects
- * @param objects Array of objects with position, velocity, radius, and mass
- * @param restitution Bounciness factor (1 = perfect elastic, 0 = no bounce)
- * @returns Array of new velocities after all collisions
- * 
- * @example
- * // Resolve pool ball collisions
- * const newVelocities = collideMany(balls, 0.9);
- * balls.forEach((ball, i) => {
- *   ball.velocity = newVelocities[i];
- * });
- */
-export const collideMany = (
-  objects: { 
-    position: Vector2d; 
-    velocity: Vector2d;
-    radius: number;
-    mass: number;
-  }[], 
-  restitution: number = 0.9
-): Vector2d[] => {
-  // Create copy of velocities to accumulate changes
-  const newVelocities = objects.map(obj => ({ ...obj.velocity }));
-  
-  // Check each pair of objects
-  for (let i = 0; i < objects.length; i++) {
-    for (let j = i + 1; j < objects.length; j++) {
-      const obj1 = objects[i];
-      const obj2 = objects[j];
-      
-      // Check if objects are overlapping
-      const distance = Math.sqrt(distanceSquared(obj1.position, obj2.position));
-      if (distance <= obj1.radius + obj2.radius) {
-        // Calculate collision response
-        const [v1, v2] = collide(
-          newVelocities[i],
-          newVelocities[j],
-          obj1.position,
-          obj2.position,
-          obj1.mass,
-          obj2.mass,
-          restitution
-        );
-        
-        newVelocities[i] = v1;
-        newVelocities[j] = v2;
-      }
-    }
+  // Only apply repulsion if overlapping
+  if (overlap <= 0 || dist === 0) {
+    return;
   }
-  
-  return newVelocities;
-};
 
-/**
- * Calculates repulsion forces between multiple objects
- * @param objects Array of objects with position, radius, and mass
- * @param strength Repulsion strength multiplier
- * @returns Array of force vectors to apply to each object
- * 
- * @example
- * // Crowd simulation
- * const forces = repelMany(
- *   people,    // array of people
- *   50         // personal space force
- * );
- * people.forEach((person, i) => 
- *   person.applyForce(forces[i])
- * );
- */
-export const repelMany = (objects: { position: Vector2d; radius: number; mass: number }[], strength: number = 1): Vector2d[] => {
-  const forces = objects.map(() => ({ x: 0, y: 0 }));
-  
-  // Calculate forces between each pair
-  for (let i = 0; i < objects.length; i++) {
-    for (let j = i + 1; j < objects.length; j++) {
-      const [f1, f2] = repel(
-        objects[i].position,
-        objects[j].position,
-        objects[i].radius,
-        objects[j].radius,
-        objects[i].mass,
-        objects[j].mass,
-        strength
-      );
-      
-      // Accumulate forces for both objects
-      forces[i] = add(forces[i], f1);
-      forces[j] = add(forces[j], f2);
-    }
-  }
-  
-  return forces;
+  // Normalize the direction vector
+  const direction = scale(normal, 1 / dist);
+
+  // Calculate repulsion force based on overlap and scale by strength
+  const repulsionForce = overlap * strength;
+
+  // Calculate repulsion force proportional to mass difference
+  const totalMass = obj1.mass + obj2.mass;
+  const obj1Strength = (obj2.mass / totalMass) * repulsionForce;
+  const obj2Strength = (obj1.mass / totalMass) * repulsionForce;
+
+  // Apply repulsion forces to velocities
+  obj1.velocity = subtract(obj1.velocity, scale(direction, obj1Strength));
+  obj2.velocity = add(obj2.velocity, scale(direction, obj2Strength));
 };
 
 interface FluidParticle {
@@ -269,7 +194,7 @@ interface FluidParticle {
  *   p.applyForce(forces[i])
  * );
  */
-export const resolveFluid = (
+export const fluid = (
   particles: FluidParticle[],
   smoothingRadius: number = 30,
   stiffness: number = 50,
@@ -297,7 +222,7 @@ export const resolveFluid = (
     particles.forEach(neighbor => {
       if (p === neighbor) return;
       
-      const dist = Math.sqrt(distanceSquared(p.position, neighbor.position));
+      const dist = distance(p.position, neighbor.position);
       if (dist < smoothingRadius) {
         // Direction from p to neighbor
         const dir = normalize(subtract(neighbor.position, p.position));
@@ -361,7 +286,7 @@ interface BoidRules {
  *   bird.applyForce(forces[i])
  * );
  */
-export const resolveBoids = (boids: Boid[], rules: BoidRules = {}): Vector2d[] => {
+export const boids = (boids: Boid[], rules: BoidRules = {}): Vector2d[] => {
   const {
     separationRadius = 25,
     alignmentRadius = 50,

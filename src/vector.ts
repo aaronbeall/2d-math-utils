@@ -46,6 +46,21 @@ export const length = (v: Vector2d): number =>
   Math.sqrt(v.x * v.x + v.y * v.y);
 
 /**
+ * Calculates the normal vector (perpendicular) between two vectors.
+ * @param v1 First vector
+ * @param v2 Second vector
+ * @returns A normalized vector perpendicular to the edge from v1 to v2
+ * @example
+ * const v1 = { x: 0, y: 0 };
+ * const v2 = { x: 1, y: 0 };
+ * normal(v1, v2) // returns { x: 0, y: -1 }
+ */
+export const normal = (v1: Vector2d, v2: Vector2d): Vector2d => {
+    const edge = subtract(v2, v1);
+    return normalize({ x: -edge.y, y: edge.x }); // Perpendicular to the edge
+};
+
+/**
  * Returns unit vector (length 1) in same direction
  * @example
  * normalize({x:3,y:4}) // returns {x:0.6,y:0.8}

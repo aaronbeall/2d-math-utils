@@ -40,6 +40,13 @@ export const bodyDemos: Record<string, DemoFunction> = {
             ));
         }
 
+        const walls = [
+            { point: { x: 0, y: 0 }, normal: { x: 1, y: 0 } }, // Left wall
+            { point: { x: canvas.width, y: 0 }, normal: { x: -1, y: 0 } }, // Right wall
+            { point: { x: 0, y: 0 }, normal: { x: 0, y: 1 } }, // Top wall
+            { point: { x: 0, y: canvas.height }, normal: { x: 0, y: -1 } } // Bottom wall
+        ];
+
         const update = (deltaTime: number) => {
             // Update physics
             for (const ball of balls) {
@@ -48,14 +55,16 @@ export const bodyDemos: Record<string, DemoFunction> = {
                     ball.velocity.y = 0;
                     ball.position.x = mousePos.x - ball.grabOffset.x;
                     ball.position.y = mousePos.y - ball.grabOffset.y;
+                    ball.mass = Number.MAX_SAFE_INTEGER; // Give maximum mass while dragging
                 } else {
+                    ball.mass = Math.PI * ball.radius * ball.radius; // Reset mass
                     ball.update(deltaTime);
 
                     // Wall collisions
-                    ball.collideWithSurface({ x: 1, y: 0 }, { x: 0, y: ball.y });          // Left wall
-                    ball.collideWithSurface({ x: -1, y: 0 }, { x: canvas.width, y: ball.y });  // Right wall
-                    ball.collideWithSurface({ x: 0, y: 1 }, { x: ball.x, y: 0 });          // Top wall
-                    ball.collideWithSurface({ x: 0, y: -1 }, { x: ball.x, y: canvas.height }); // Bottom wall
+                    ball.collideWithSurface({ x: 0, y: 0 }, { x: 1, y: 0 }); // Left wall
+                    ball.collideWithSurface({ x: canvas.width, y: 0 }, { x: -1, y: 0 }); // Right wall
+                    ball.collideWithSurface({ x: 0, y: 0 }, { x: 0, y: 1 }); // Top wall
+                    ball.collideWithSurface({ x: 0, y: canvas.height }, { x: 0, y: -1 }); // Bottom wall
                 }
             }
 
@@ -63,9 +72,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
             for (let i = 0; i < balls.length; i++) {
                 for (let j = i + 1; j < balls.length; j++) {
                     const b1 = balls[i], b2 = balls[j];
-                    // if (!b1.grabbed && !b2.grabbed) {
-                        b1.collideWithBody(b2);
-                    // }
+                    b1.collideWithBody(b2);
                 }
             }
         };
