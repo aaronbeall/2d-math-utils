@@ -2,7 +2,7 @@ import { PhysicalBody, Vector2d } from '../../src';
 import { DemoFunction } from './index';
 import * as point from '../../src/point';
 import * as vector from '../../src/vector';
-import { animate, clearCanvas, drawCircle, drawRect, simulate, drag } from '../utils';
+import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults } from '../utils';
 
 
 export const bodyDemos: Record<string, DemoFunction> = {
@@ -31,25 +31,44 @@ export const bodyDemos: Record<string, DemoFunction> = {
         const lastPos: Vector2d = { x: 0, y: 0 };
         let lastTime = 0;
 
-        // Create some balls
-        for (let i = 0; i < 10; i++) {
-            balls.push(new Ball(
+        const overlapModes: PhysicalBody["collisionOverlapResolution"][] = ['separate', 'repel', 'none'];
+        let currentOverlapModeIndex = 0;
+
+        const addBall = () => {
+            const radius = 10 + Math.random() * 20;
+            const ball = new Ball(
                 Math.random() * canvas.width,
                 Math.random() * canvas.height * 0.5,
-                10 + Math.random() * 20
-            ));
-        }
+                radius
+            );
+            ball.velocity = { x: Math.random() * 200 - 100, y: Math.random() * 200 - 100 };
+            ball.collisionOverlapResolution = overlapModes[currentOverlapModeIndex];
+            balls.push(ball);
+        };
 
-        const walls = [
-            { point: { x: 0, y: 0 }, normal: { x: 1, y: 0 } }, // Left wall
-            { point: { x: canvas.width, y: 0 }, normal: { x: -1, y: 0 } }, // Right wall
-            { point: { x: 0, y: 0 }, normal: { x: 0, y: 1 } }, // Top wall
-            { point: { x: 0, y: canvas.height }, normal: { x: 0, y: -1 } } // Bottom wall
-        ];
+        const removeBall = () => {
+            if (balls.length > 0) {
+                balls.pop();
+            }
+        };
+
+        const resetBalls = () => {
+            balls.length = 0;
+            Array.from({ length: 10 }).forEach(addBall);
+        };
+
+        const toggleOverlapMode = () => {
+            currentOverlapModeIndex = (currentOverlapModeIndex + 1) % overlapModes.length;
+            balls.forEach(ball => {
+                ball.collisionOverlapResolution = overlapModes[currentOverlapModeIndex];
+            });
+        };
+
+        resetBalls();
 
         const update = (deltaTime: number) => {
             // Update physics
-            for (const ball of balls) {
+            balls.forEach(ball => {
                 if (ball.grabbed) {
                     ball.velocity.x = 0;
                     ball.velocity.y = 0;
@@ -66,22 +85,31 @@ export const bodyDemos: Record<string, DemoFunction> = {
                     ball.collideWithSurface({ x: 0, y: 0 }, { x: 0, y: 1 }); // Top wall
                     ball.collideWithSurface({ x: 0, y: canvas.height }, { x: 0, y: -1 }); // Bottom wall
                 }
-            }
+            });
 
             // Ball-to-ball collisions
-            for (let i = 0; i < balls.length; i++) {
-                for (let j = i + 1; j < balls.length; j++) {
-                    const b1 = balls[i], b2 = balls[j];
+            balls.forEach((b1, i) => {
+                balls.slice(i + 1).forEach(b2 => {
                     b1.collideWithBody(b2);
-                }
-            }
+                });
+            });
         };
 
         const draw = () => {
             clearCanvas(ctx);
-            for (const ball of balls) {
-              drawCircle(ctx, ball, ball.grabbed ? 'red' : 'blue', true);
-            }
+            balls.forEach(ball => {
+                drawCircle(ctx, ball, ball.grabbed ? 'red' : 'blue', true);
+            });
+
+            // Show results
+            drawResults(ctx, [
+                ['Number of Balls', balls.length],
+                ['Overlap Mode', overlapModes[currentOverlapModeIndex]],
+                'Drag balls to move them',
+                'Press +/- to add/remove a ball',
+                'Press R to reset',
+                'Press O to toggle overlap mode'
+            ]);
         };
 
         drag({ canvas, draw }, {
@@ -94,15 +122,14 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 lastPos.y = pos.y;
                 lastTime = performance.now();
 
-                for (const ball of balls) {
+                balls.forEach(ball => {
                     const dist = point.distance(ball.position, mousePos);
                     if (dist <= ball.radius) {
                         ball.grabbed = true;
                         draggedBall = ball;
                         ball.grabOffset = vector.subtract(mousePos, ball.position);
-                        break;
                     }
-                }
+                });
             },
             onDrag: (pos) => {
                 lastPos.x = mousePos.x;
@@ -133,6 +160,13 @@ export const bodyDemos: Record<string, DemoFunction> = {
                     draggedBall = null;
                 }
             }
+        });
+
+        key({ canvas, draw }, {
+            '+': addBall,
+            '-': removeBall,
+            'r': resetBalls,
+            'o': toggleOverlapMode
         });
 
         return simulate(update, draw);
@@ -196,7 +230,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
         }
         
         const update = (deltaTime: number) => {
-            for (const ball of balls) {
+            balls.forEach(ball => {
                 ball.update(deltaTime);
                 
                 // Cushion collisions
@@ -205,15 +239,14 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 ball.collideWithSurface({ x: -1, y: 0 }, { x: canvas.width - padding, y: ball.y });
                 ball.collideWithSurface({ x: 0, y: 1 }, { x: ball.x, y: padding });
                 ball.collideWithSurface({ x: 0, y: -1 }, { x: ball.x, y: canvas.height - padding });
-            }
+            });
             
             // Ball collisions
-            for (let i = 0; i < balls.length; i++) {
-                for (let j = i + 1; j < balls.length; j++) {
-                    const b1 = balls[i], b2 = balls[j];
+            balls.forEach((b1, i) => {
+                balls.slice(i + 1).forEach(b2 => {
                     b1.collideWithBody(b2);
-                }
-            }
+                });
+            });
         };
         
         const draw = () => {
@@ -224,7 +257,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Draw balls
-            for (const ball of balls) {
+            balls.forEach(ball => {
                 if (ball.color.startsWith('striped-')) {
                     // Draw striped ball
                     const baseColor = ball.color.substring(8);
@@ -244,7 +277,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
                     // Draw solid ball
                     drawCircle(ctx, ball, ball.color, true);
                 }
-            }
+            });
             
             // Draw aiming line
             if (draggedBall) {
@@ -606,9 +639,9 @@ export const bodyDemos: Record<string, DemoFunction> = {
             
             // Draw bullets
             ctx.fillStyle = '#ff0';
-            for (const bullet of bullets) {
+            bullets.forEach(bullet => {
                 drawCircle(ctx, bullet);
-            }
+            });
         };
         
         return simulate(update, draw);

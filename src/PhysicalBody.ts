@@ -21,6 +21,7 @@ export class PhysicalBody {
   mass: number = 1;            // Mass affects force response & collisions
   radius: number = 0;          // Collision radius
   elasticity: number = 0.8;    // Bounce factor (0 = stop, 1 = perfect bounce)
+  collisionOverlapResolution: 'separate' | 'repel' | 'none' = 'separate'; // Overlap resolution mode
 
   /** Top-Down Properties (for top-down games like tanks, racing) */
   angle: number = 0;           // Rotation angle in radians
@@ -114,7 +115,7 @@ export class PhysicalBody {
     const restitution = this.elasticity * other.elasticity;
 
     // Resolve collision using physics library
-    physics.collide(this, other, restitution);
+    physics.collide(this, other, restitution, this.collisionOverlapResolution);
 
     return true;
   }

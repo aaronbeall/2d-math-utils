@@ -180,20 +180,24 @@ export function move({ canvas, draw }: HandlerContext, handler: (pos: Point) => 
 }
 
 export function key({ canvas, draw }: HandlerContext, mappings: Record<string, () => void>) {
-    // Transform mappings to support arrays of keys
+    // Normalize keys to handle case-insensitivity and special key pairs
+    const normalizeKey = (key: string) =>
+        ({ '+': '=', '-': '_' }[key.toLowerCase()] ?? key.toLowerCase());
+
+    // Transform mappings into normalized handlers
     const handlers = Object.entries(mappings).reduce((acc, [keys, callback]) => {
-        keys.split('').forEach(key => acc[key.trim()] = callback);
+        keys.split('').forEach(key => acc[normalizeKey(key.trim())] = callback );
         return acc;
     }, {} as Record<string, () => void>);
-    
+
     const handler = (e: KeyboardEvent) => {
-        const callback = handlers[e.key];
+        const callback = handlers[normalizeKey(e.key)];
         if (callback) {
             callback();
             draw?.();
         }
     };
-    
+
     canvas.tabIndex = 0;
     canvas.focus();
     canvas.addEventListener('keydown', handler);
