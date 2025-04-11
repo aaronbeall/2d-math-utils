@@ -193,8 +193,8 @@ export const pointDemos: Record<keyof typeof point, DemoFunction> = {
             onDrag: pos => line.end = pos
         });
         key({ canvas, draw }, {
-            '+=': () => lineWidth++,
-            '-_': () => lineWidth--
+            '+': () => lineWidth++,
+            '-': () => lineWidth--
         });
         
         draw();
@@ -224,13 +224,49 @@ export const pointDemos: Record<keyof typeof point, DemoFunction> = {
 
         move({ canvas, draw }, pos => target = pos);
         key({ canvas, draw }, {
-            '+=': () => maxDistance *= 1.2,
-            '-_': () => maxDistance /= 1.2
+            '+': () => maxDistance *= 1.2,
+            '-': () => maxDistance /= 1.2
         });
 
         animate(
             draw,
             () => current = point.moveTowards(current, target, maxDistance)
         );
-    }
+    },
+
+    interpolate: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        let p1 = { x: 100, y: 100 };
+        let p2 = { x: 300, y: 300 };
+        let t = 0.5;
+
+        function draw() {
+            clearCanvas(ctx);
+            drawPoint(ctx, p1, 'blue');
+            drawPoint(ctx, p2, 'red');
+            drawLine(ctx, { start: p1, end: p2 }, 'gray');
+
+            const interpolated = point.interpolate(p1, p2, t);
+            drawPoint(ctx, interpolated, 'green');
+
+            drawResults(ctx, [
+                ['Point 1', p1],
+                ['Point 2', p2],
+                ['t (Interpolation)', t.toFixed(2)],
+                ['Interpolated', interpolated],
+                'Click to set Point 1',
+                'Move mouse to set Point 2',
+                'Use +/- to adjust t'
+            ]);
+        }
+
+        click({ canvas, draw }, pos => p1 = pos);
+        move({ canvas, draw }, pos => p2 = pos);
+        key({ canvas, draw }, {
+            '+': () => t = Math.min(1, t + 0.05),
+            '-': () => t = Math.max(0, t - 0.05)
+        });
+
+        draw();
+    },
 };

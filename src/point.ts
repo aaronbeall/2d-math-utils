@@ -134,3 +134,16 @@ export const moveTowards = (current: Point, target: Point, maxDistance: number):
     y: current.y + (dy / dist) * maxDistance
   };
 };
+
+/**
+ * Interpolates between two points based on a factor t (0-1).
+ * @example
+ * const p1 = {x:0, y:0};
+ * const p2 = {x:10, y:10};
+ * interpolate(p1, p2, 0.5) // returns {x:5, y:5}
+ */
+export const interpolate = (p1: Point, p2: Point, t: number): Point => ({
+  x: p1.x + (p2.x - p1.x) * Math.max(0, Math.min(1, t)),
+  y: p1.y + (p2.y - p1.y) * Math.max(0, Math.min(1, t))
+});
+

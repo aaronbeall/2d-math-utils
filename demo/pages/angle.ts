@@ -36,8 +36,8 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
         }
 
         key({ canvas, draw }, {
-            '+=': () => degrees++,
-            '-_': () => degrees--
+            '+': () => degrees++,
+            '-': () => degrees--
         });
 
         draw();
@@ -73,8 +73,8 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
         }
 
         key({ canvas, draw }, {
-            '+=': () => radians += Math.PI / 180,
-            '-_': () => radians -= Math.PI / 180
+            '+': () => radians + Math.PI / 180,
+            '-': () => radians -= Math.PI / 180
         });
 
         draw();
@@ -342,8 +342,8 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
 
         move({ canvas, draw }, pos => target = pos);
         key({ canvas, draw }, {
-            '+=': () => step *= 1.5,
-            '-_': () => step /= 1.5
+            '+': () => step *= 1.5,
+            '-': () => step /= 1.5
         });
         animate(draw, () => currentAngle = angle.rotateAngleTowardsRadians(currentAngle, angle.radiansBetweenPoints(center, target), step));
     },
@@ -374,8 +374,8 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
 
         move({ canvas, draw }, pos => target = pos);
         key({ canvas, draw }, {
-            '+=': () => step *= 1.5,
-            '-_': () => step /= 1.5
+            '+': () => step *= 1.5,
+            '-': () => step /= 1.5
         });
         animate(draw, () => currentAngle = angle.rotateAngleTowardsDegrees(currentAngle, angle.degreesBetweenPoints(center, target), step));
     }
