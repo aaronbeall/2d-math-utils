@@ -702,7 +702,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
 
         const tank = new Tank();
         const bullets: Bullet[] = [];
-        const obstacles: Obstacle[] = Array.from({ length: 5 }, () => 
+        const obstacles: Obstacle[] = Array.from({ length: 15 }, () => 
             new Obstacle(
                 Math.random() * canvas.width,
                 Math.random() * canvas.height,
@@ -853,11 +853,12 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 super({ x, y, mass: radius * 10 });
                 this.radius = radius;
                 this.elasticity = 0.8;
+                this.friction = 0.002;
             }
         }
         
         const car = new Car();
-        const obstacles: Obstacle[] = Array.from({ length: 5 }, () => 
+        const obstacles: Obstacle[] = Array.from({ length: 15 }, () => 
             new Obstacle(
                 Math.random() * canvas.width,
                 Math.random() * canvas.height,
