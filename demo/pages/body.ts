@@ -659,6 +659,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
             constructor() {
                 super({ x: canvas.width/2, y: canvas.height/2, mass: 5 });
                 this.radius = 20;
+                this.mass = 100
             }
             
             update(deltaTime: number) {
@@ -682,14 +683,31 @@ export const bodyDemos: Record<string, DemoFunction> = {
             constructor(position: Vector2d, angle: number) {
                 super({
                     position,
-                    velocity: vector.fromAngleRadians(angle, 500)
+                    velocity: vector.fromAngleRadians(angle, 2500)
                 });
                 this.radius = 3;
+                this.mass = 25;
             }
         }
-        
+
+        class Obstacle extends PhysicalBody {
+            constructor(x: number, y: number, radius: number) {
+                super({ x, y, mass: radius * 10 });
+                this.radius = radius;
+                this.elasticity = 0.8;
+                this.friction = 0.5;
+            }
+        }
+
         const tank = new Tank();
         const bullets: Bullet[] = [];
+        const obstacles: Obstacle[] = Array.from({ length: 5 }, () => 
+            new Obstacle(
+                Math.random() * canvas.width,
+                Math.random() * canvas.height,
+                10 + Math.random() * 20
+            )
+        );
         const mousePos: Point = { x: 0, y: 0 };
 
         // Use move() to update turret angle based on mouse position
@@ -738,6 +756,22 @@ export const bodyDemos: Record<string, DemoFunction> = {
                     bullets.splice(i, 1);
                 }
             }
+
+            // Update obstacles
+            obstacles.forEach(obstacle => obstacle.update(deltaTime));
+
+            // Handle collisions between tank and obstacles
+            obstacles.forEach(obstacle => tank.collideWithBody(obstacle));
+
+            // Handle collisions between bullets and obstacles
+            bullets.forEach(bullet => {
+                obstacles.forEach(obstacle => bullet.collideWithBody(obstacle));
+            });
+
+            // Handle collisions between obstacles
+            obstacles.forEach((o1, i) => {
+                obstacles.slice(i + 1).forEach(o2 => o1.collideWithBody(o2));
+            });
         };
 
         function draw() {
@@ -769,6 +803,11 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 drawCircle(ctx, bullet, "orange", true);
             });
 
+            // Draw obstacles
+            obstacles.forEach(obstacle => {
+                drawCircle(ctx, obstacle, "gray", true);
+            });
+
             // Render speed in the output
             drawResults(ctx, [
                 ['Speed', tank.speed],
@@ -791,6 +830,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
             constructor() {
                 super({ x: canvas.width/2, y: canvas.height/2, mass: 2 });
                 this.radius = 20;
+                this.mass = 100;
             }
             
             update(deltaTime: number) {
@@ -806,8 +846,23 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 super.update(deltaTime);
             }
         }
+
+        class Obstacle extends PhysicalBody {
+            constructor(x: number, y: number, radius: number) {
+                super({ x, y, mass: radius * 10 });
+                this.radius = radius;
+                this.elasticity = 0.8;
+            }
+        }
         
         const car = new Car();
+        const obstacles: Obstacle[] = Array.from({ length: 5 }, () => 
+            new Obstacle(
+                Math.random() * canvas.width,
+                Math.random() * canvas.height,
+                10 + Math.random() * 20
+            )
+        );
         keys.listen();
 
         const update = (deltaTime: number) => {
@@ -826,6 +881,23 @@ export const bodyDemos: Record<string, DemoFunction> = {
             // Keep car in bounds
             car.position.x = (car.position.x + canvas.width) % canvas.width;
             car.position.y = (car.position.y + canvas.height) % canvas.height;
+
+            // Update obstacles
+            obstacles.forEach(obstacle => {
+                obstacle.update(deltaTime);
+
+                // Loop obstacles around the canvas
+                obstacle.position.x = (obstacle.position.x + canvas.width) % canvas.width;
+                obstacle.position.y = (obstacle.position.y + canvas.height) % canvas.height;
+            });
+
+            // Handle collisions between car and obstacles
+            obstacles.forEach(obstacle => car.collideWithBody(obstacle));
+
+            // Handle collisions between obstacles
+            obstacles.forEach((o1, i) => {
+                obstacles.slice(i + 1).forEach(o2 => o1.collideWithBody(o2));
+            });
         };
 
         const draw = () => {
@@ -843,6 +915,11 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 drawRect(ctx, { x: -15, y: 8, width: 8, height: 4 }, '#333', true);
                 drawRect(ctx, { x: 7, y: -12, width: 8, height: 4 }, '#333', true);
                 drawRect(ctx, { x: 7, y: 8, width: 8, height: 4 }, '#333', true);
+            });
+
+            // Draw obstacles
+            obstacles.forEach(obstacle => {
+                drawCircle(ctx, obstacle, "gray", true);
             });
 
             // Render speed and steering in the output
