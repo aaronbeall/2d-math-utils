@@ -76,6 +76,13 @@ export function drawText(ctx: CanvasRenderingContext2D, text: string, x: number,
     ctx.fillText(text, x, y);
 }
 
+export function drawArc(ctx: CanvasRenderingContext2D, center: Point, radius: number, startAngle: number, endAngle: number, color = 'black') {
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, radius, startAngle, endAngle);
+    ctx.strokeStyle = color;
+    ctx.stroke();
+}
+
 type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line;
 type ResultEntry = string | [label: string, value: ResultValue, color?: string];
 

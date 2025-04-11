@@ -1,7 +1,7 @@
 import * as angle from '../../src/angle';
 import * as vector from '../../src/vector';
 import { DemoFunction } from './index';
-import { clearCanvas, drawPoint, drawLine, drawResults, drawArrow, drag, move, key, click, animate } from '../utils';
+import { clearCanvas, drawPoint, drawLine, drawResults, drawArrow, drag, move, key, click, animate, drawArc } from '../utils';
 import { Point } from '../../src';
 import * as point from '../../src/point';
 
@@ -9,12 +9,28 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
     degreesToRadians: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         let degrees = 45;
+        const center = { x: canvas.width / 2, y: canvas.height / 2 };
+        const radius = 100;
 
         function draw() {
             clearCanvas(ctx);
+
+            // Draw center dot
+            drawPoint(ctx, center, 'black', 5);
+
+            // Draw angle visualization
+            const radians = angle.degreesToRadians(degrees);
+            drawArc(ctx, center, radius, 0, radians, 'blue');
+
+            // Draw lines at the end of the arc
+            const normalEnd = vector.add(center, { x: radius, y: 0 });
+            const angleEnd = vector.add(center, vector.fromAngleRadians(radians, radius));
+            drawLine(ctx, { start: center, end: normalEnd }, 'blue');
+            drawLine(ctx, { start: center, end: angleEnd }, 'blue');
+
             drawResults(ctx, [
                 ['Degrees', degrees],
-                ['Radians', angle.degreesToRadians(degrees)],
+                ['Radians', radians],
                 'Use +/- to adjust angle'
             ]);
         }
@@ -30,19 +46,35 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
     radiansToDegrees: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         let radians = Math.PI / 4;
+        const center = { x: canvas.width / 2, y: canvas.height / 2 };
+        const radius = 100;
 
         function draw() {
             clearCanvas(ctx);
+
+            // Draw center dot
+            drawPoint(ctx, center, 'black', 5);
+
+            // Draw angle visualization
+            const degrees = angle.radiansToDegrees(radians);
+            drawArc(ctx, center, radius, 0, radians, 'red');
+
+            // Draw lines at the end of the arc
+            const normalEnd = vector.add(center, { x: radius, y: 0 });
+            const angleEnd = vector.add(center, vector.fromAngleRadians(radians, radius));
+            drawLine(ctx, { start: center, end: normalEnd }, 'red');
+            drawLine(ctx, { start: center, end: angleEnd }, 'red');
+
             drawResults(ctx, [
                 ['Radians', radians],
-                ['Degrees', angle.radiansToDegrees(radians)],
+                ['Degrees', degrees],
                 'Use +/- to adjust angle'
             ]);
         }
 
         key({ canvas, draw }, {
-            '+=': () => radians += Math.PI/180,
-            '-_': () => radians -= Math.PI/180
+            '+=': () => radians += Math.PI / 180,
+            '-_': () => radians -= Math.PI / 180
         });
 
         draw();
@@ -313,7 +345,7 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
             '+=': () => step *= 1.5,
             '-_': () => step /= 1.5
         });
-        animate(draw, () => currentAngle = angle.rotateAngleTowardsRadians(center, target, currentAngle, step));
+        animate(draw, () => currentAngle = angle.rotateAngleTowardsRadians(currentAngle, angle.radiansBetweenPoints(center, target), step));
     },
 
     rotateAngleTowardsDegrees: (canvas) => {
@@ -345,6 +377,6 @@ export const angleDemos: Record<keyof typeof angle, DemoFunction> = {
             '+=': () => step *= 1.5,
             '-_': () => step /= 1.5
         });
-        animate(draw, () => currentAngle = angle.rotateAngleTowardsDegrees(center, target, currentAngle, step));
+        animate(draw, () => currentAngle = angle.rotateAngleTowardsDegrees(currentAngle, angle.degreesBetweenPoints(center, target), step));
     }
 };
