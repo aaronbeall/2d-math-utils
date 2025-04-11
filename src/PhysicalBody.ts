@@ -100,7 +100,7 @@ export class PhysicalBody {
    * Applies a continuous forward force in the direction of angle
    * Example: Rocket engine, car acceleration
    */
-  applyThrust(force: number, angle: number = this.angle) {
+  thrust(force: number, angle: number = this.angle) {
     physics.applyAngleForce(this.acceleration, angle, force, this.mass);
   }
 

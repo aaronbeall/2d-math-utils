@@ -2,7 +2,7 @@ import { PhysicalBody, Vector2d } from '../../src';
 import { DemoFunction } from './index';
 import * as point from '../../src/point';
 import * as vector from '../../src/vector';
-import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults, drawLine } from '../utils';
+import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults, drawLine, globalKey, keys, drawPoint } from '../utils';
 
 
 export const bodyDemos: Record<string, DemoFunction> = {
@@ -356,14 +356,13 @@ export const bodyDemos: Record<string, DemoFunction> = {
             thrusting = false;
             
             constructor() {
-                super({ x: canvas.width/2, y: canvas.height/2, mass: 1 });
+                super({ x: canvas.width / 2, y: canvas.height / 2, mass: 1 });
                 this.radius = 20;
             }
             
-            applyThrust() {
+            thrust() {
                 const force = vector.fromAngleRadians(this.angle, 500);
                 this.applyForce(force);
-                this.thrusting = true;
             }
             
             update(deltaTime: number) {
@@ -374,32 +373,86 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 // Wrap around edges
                 this.position.x = (this.position.x + canvas.width) % canvas.width;
                 this.position.y = (this.position.y + canvas.height) % canvas.height;
-                this.thrusting = false;
             }
         }
         
         const ship = new Spaceship();
-        const keys = new Set<string>();
-        
-        window.addEventListener('keydown', e => keys.add(e.key));
-        window.addEventListener('keyup', e => keys.delete(e.key));
-        
+
+        // Generate stars
+        const stars = Array.from({ length: 100 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            color: `rgba(${200 + Math.random() * 55}, ${200 + Math.random() * 55}, ${200 + Math.random() * 55}, 1)`,
+            size: Math.random() * 2 + 1
+        }));
+
+        type Particle = { x: number; y: number; radius: number; life: number; velocity: Vector2d };
+
+        let particles: Particle[] = [];
+
+        keys.listen();
+
         const update = (deltaTime: number) => {
-            if (keys.has('ArrowLeft')) ship.angle -= 4 * deltaTime;
-            if (keys.has('ArrowRight')) ship.angle += 4 * deltaTime;
-            if (keys.has('ArrowUp')) ship.applyThrust();
-            
+            if (keys.isDown('ArrowLeft')) ship.angle -= 4 * deltaTime;
+            if (keys.isDown('ArrowRight')) ship.angle += 4 * deltaTime;
+            if (keys.isDown('ArrowUp')) {
+                ship.thrust();
+                ship.thrusting = true;
+
+                // Emit particles
+                for (let i = 0; i < 3; i++) {
+                    const thrustVector = vector.fromAngleRadians(ship.angle, -15);
+                    particles.push({
+                        x: ship.position.x + thrustVector.x + (Math.random() - 0.5) * 10,
+                        y: ship.position.y + thrustVector.y + (Math.random() - 0.5) * 10,
+                        radius: Math.random() * 3 + 1,
+                        life: 1,
+                        velocity: vector.add(
+                            vector.fromAngleRadians(ship.angle, -300),
+                            vector.fromAngleRadians(Math.random() * Math.PI * 2, Math.random() * 50)
+                        )
+                    });
+                }
+            } else {
+                ship.thrusting = false;
+            }
+
             ship.update(deltaTime);
+
+            // Update particles
+            particles.forEach(p => {
+                p.life -= deltaTime;
+                p.x += p.velocity.x * deltaTime;
+                p.y += p.velocity.y * deltaTime;
+
+                // Apply friction to slow down particles
+                p.velocity = vector.scale(p.velocity, 0.95);
+
+                p.radius *= 0.95; // Shrink over time
+            });
+            particles = particles.filter(p => p.life > 0); // Remove dead particles
         };
-        
+
         const draw = () => {
-            clearCanvas(ctx);
-            
+            // Draw black background
+            drawRect(ctx, { x: 0, y: 0, width: canvas.width, height: canvas.height }, 'black', true);
+
+            // Draw stars
+            stars.forEach(star => {
+                drawPoint(ctx, { x: star.x, y: star.y }, star.color, star.size);
+            });
+
+            // Draw particles
+            particles.forEach(p => {
+                drawCircle(ctx, { x: p.x, y: p.y, radius: p.radius }, 'orange', true);
+            });
+
+            // Draw spaceship
             ctx.save();
             ctx.translate(ship.position.x, ship.position.y);
             ctx.rotate(ship.angle);
-            
-            // Draw ship
+
+            // Draw ship body
             ctx.beginPath();
             ctx.moveTo(20, 0);
             ctx.lineTo(-10, 10);
@@ -407,19 +460,22 @@ export const bodyDemos: Record<string, DemoFunction> = {
             ctx.closePath();
             ctx.strokeStyle = 'white';
             ctx.stroke();
-            
+
             // Draw thrust
             if (ship.thrusting) {
                 ctx.beginPath();
                 ctx.moveTo(-10, 0);
-                ctx.lineTo(-20, 5);
-                ctx.lineTo(-25, 0);
-                ctx.lineTo(-20, -5);
+                const spikes = 5;
+                for (let i = 0; i <= spikes; i++) {
+                    const angle = (i / spikes) * Math.PI / 3 - Math.PI / 6; // Symmetrical angle range
+                    const length = 10 + Math.random() * 10; // Random spiky length
+                    ctx.lineTo(-10 - length * Math.cos(angle), length * Math.sin(angle));
+                }
                 ctx.closePath();
                 ctx.fillStyle = 'orange';
                 ctx.fill();
             }
-            
+
             ctx.restore();
         };
         

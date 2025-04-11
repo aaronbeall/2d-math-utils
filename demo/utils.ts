@@ -247,8 +247,6 @@ export function key({ canvas, draw }: HandlerContext, mappings: Record<string, (
 let currentAnimation: number | null = null;
 
 export function animate(draw: () => void, udpate?: () => void) {
-    stop();
-
     function loop() {
         udpate?.();
         draw();
@@ -270,11 +268,12 @@ export function simulate(update: (deltaTime: number) => void, draw: () => void) 
     });
 }
 
-export function stop() {
+export function reset() {
     if (currentAnimation !== null) {
         cancelAnimationFrame(currentAnimation);
         currentAnimation = null;
     }
+    keys.stop();
 }
 
 /**
@@ -313,3 +312,31 @@ export function drawAxes(ctx: CanvasRenderingContext2D) {
     ctx.lineTo(0, height / 2);
     ctx.stroke();
 }
+
+export const keys = (() => {
+    const pressedKeys = new Set<string>();
+    let listener: ((e: KeyboardEvent) => void) | null = null;
+
+    return {
+        listen() {
+            if (listener) return; // Avoid multiple listeners
+            listener = (e: KeyboardEvent) => {
+                if (e.type === 'keydown') pressedKeys.add(e.code);
+                if (e.type === 'keyup') pressedKeys.delete(e.code);
+            };
+            window.addEventListener('keydown', listener);
+            window.addEventListener('keyup', listener);
+        },
+        isDown(keyCode: string) {
+            return pressedKeys.has(keyCode);
+        },
+        stop() {
+            if (listener) {
+                window.removeEventListener('keydown', listener);
+                window.removeEventListener('keyup', listener);
+                listener = null;
+                pressedKeys.clear();
+            }
+        }
+    };
+})();
