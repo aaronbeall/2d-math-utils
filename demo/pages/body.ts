@@ -1,8 +1,9 @@
-import { PhysicalBody, Vector2d } from '../../src';
+import { radiansBetweenPoints } from "./../../src/angle";
+import { angle, PhysicalBody, Point, Vector2d } from '../../src';
 import { DemoFunction } from './index';
 import * as point from '../../src/point';
 import * as vector from '../../src/vector';
-import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults, drawLine, globalKey, keys, drawPoint } from '../utils';
+import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults, drawLine, keys, drawPoint, move, click, drawArrow } from '../utils';
 
 
 export const bodyDemos: Record<string, DemoFunction> = {
@@ -485,21 +486,42 @@ export const bodyDemos: Record<string, DemoFunction> = {
         const ctx = canvas.getContext('2d')!;
         
         class Cannon {
-            position: Vector2d;
-            angle = -Math.PI/4;
-            power = 500;
-            
+            position: Point;
+            angle = -Math.PI / 4;
+            power = 0;
+            charging = false;
+            chargeStartTime = 0;
+
             constructor(x: number, y: number) {
                 this.position = { x, y };
+            }
+
+            startCharging() {
+                this.charging = true;
+                this.chargeStartTime = performance.now();
+            }
+
+            stopCharging() {
+                this.charging = false;
+                this.power = this.calculatePower();
+            }
+
+            calculatePower(): number {
+                const minPower = 100;
+                const maxPower = 1000;
+                const powerPerSecond = 500;
+
+                const chargeDuration = (performance.now() - this.chargeStartTime) / 1000; // in seconds
+                return Math.min(maxPower, minPower + chargeDuration * powerPerSecond);
             }
         }
         
         class Cannonball extends PhysicalBody {
-            constructor(position: Vector2d, velocity: Vector2d) {
+            constructor(position: Point, velocity: Vector2d) {
                 super({ 
-                    ...position,
+                    position,
                     velocity,
-                    mass: 1,
+                    mass: 5,
                     gravity: { x: 0, y: 500 }
                 });
                 this.radius = 5;
@@ -513,9 +535,21 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 super({ 
                     x,
                     y: canvas.height - 50,
-                    mass: 1
+                    mass: 10 // Give the target some mass to react to collisions
                 });
                 this.radius = 20;
+            }
+
+            applyGravity() {
+                this.gravity = { x: 0, y: 500 }; // Apply downward gravity
+            }
+
+            reset() {
+                this.hit = false;
+                this.gravity = { x: 0, y: 0 }; // Remove gravity
+                this.velocity = { x: 0, y: 0 }; // Reset velocity
+                this.position.x = Math.random() * (canvas.width - 200) + 100; // Random x position
+                this.position.y = Math.random() * (canvas.height - 200); // Random y position
             }
         }
         
@@ -523,68 +557,91 @@ export const bodyDemos: Record<string, DemoFunction> = {
         const target = new Target(canvas.width - 100);
         let cannonball: Cannonball | null = null;
         let score = 0;
-        
-        canvas.addEventListener('mousemove', e => {
-            const dx = e.offsetX - cannon.position.x;
-            const dy = e.offsetY - cannon.position.y;
-            cannon.angle = Math.atan2(dy, dx);
+
+        const ground = canvas.height - 30;
+
+        drag({ canvas, draw }, {
+            onStart: () => {
+                cannon.startCharging();
+            },
+            onEnd: () => {
+                cannon.stopCharging();
+                const velocity = vector.fromAngleRadians(cannon.angle, cannon.power);
+                cannonball = new Cannonball({ ...cannon.position }, velocity);
+            }
         });
-        
-        canvas.addEventListener('click', () => {
-            if (cannonball) return;
-            const velocity = vector.fromAngleRadians(cannon.angle, cannon.power);
-            cannonball = new Cannonball(cannon.position, velocity);
+
+        move({ canvas }, (pos) => {
+            cannon.angle = angle.radiansBetweenPoints(cannon.position, pos);
         });
-        
+
         const update = (deltaTime: number) => {
             if (cannonball) {
                 cannonball.update(deltaTime);
                 
-                // Check for hit
-                if (!target.hit && point.distance(cannonball.position, target.position) < target.radius) {
+                // Check for collision with the target
+                if (!target.hit && cannonball.collideWithBody(target)) {
                     target.hit = true;
+                    target.applyGravity(); // Apply gravity to the target
                     score++;
-                    setTimeout(() => {
-                        target.hit = false;
-                        target.position.x = Math.random() * (canvas.width - 200) + 100;
-                    }, 1000);
+                    cannonball = null;
                 }
                 
-                // Remove if off screen
-                if (cannonball.position.y > canvas.height) {
+                // Remove if off screen or hits the ground
+                else if (cannonball.position.y > ground) {
                     cannonball = null;
                 }
             }
+
+            // Update target physics
+            target.update(deltaTime);
+
+            // Reset target if it falls below the ground
+            if (target.position.y > ground) {
+                target.reset();
+            }
         };
         
-        const draw = () => {
+        function draw() {
             clearCanvas(ctx);
             
             // Draw ground
-            ctx.fillStyle = '#764';
-            ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+            drawRect(ctx, { x: 0, y: ground, width: canvas.width, height: canvas.height - ground }, '#764', true);
             
+            // Draw cannon base
+            drawCircle(ctx, { x: cannon.position.x, y: cannon.position.y, radius: 15 }, '#333', true);
+
             // Draw cannon
-            ctx.save();
-            ctx.translate(cannon.position.x, cannon.position.y);
-            ctx.rotate(cannon.angle);
-            ctx.fillStyle = '#333';
-            ctx.fillRect(0, -5, 30, 10);
-            ctx.restore();
-            
+            const cannonEnd = vector.add(
+                cannon.position,
+                vector.fromAngleRadians(cannon.angle, 30) // Cannon length
+            );
+            drawLine(ctx, { start: cannon.position, end: cannonEnd }, '#333', 10);
+
+            // Visualize charged power with a red arrow
+            if (cannon.charging) {
+                const power = cannon.calculatePower();
+                const powerArrowEnd = vector.add(
+                    cannon.position,
+                    vector.fromAngleRadians(cannon.angle, power / 10) // Scale power for visualization
+                );
+                drawArrow(ctx, cannon.position, powerArrowEnd, 'red');
+            }
+
             // Draw target
-            ctx.fillStyle = target.hit ? 'red' : 'green';
-            drawCircle(ctx, target);
-            
+            drawCircle(ctx, target, target.hit ? 'red' : 'blue', true);
+
             // Draw cannonball
             if (cannonball) {
-                drawCircle(ctx, cannonball, '#333');
+                drawCircle(ctx, cannonball, '#333', true);
             }
             
-            // Draw score
-            ctx.fillStyle = 'white';
-            ctx.font = '24px Arial';
-            ctx.fillText(`Score: ${score}`, 20, 40);
+            // Draw score and power
+            drawResults(ctx, [
+                ['Score', score],
+                ['Angle', angle.radiansToDegrees(cannon.angle)],
+                ['Power', cannon.charging ? cannon.calculatePower() : cannon.power],
+            ]);
         };
         
         return simulate(update, draw);

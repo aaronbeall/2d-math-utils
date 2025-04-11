@@ -2,6 +2,7 @@ import { Circle, Point, Vector2d } from './types';
 import * as vector from './vector';
 import * as physics from './physics';
 import { distance } from './point';
+import { radiansBetweenPoints } from './angle';
 
 /**
  * PhysicalBody class for simulating physical objects in 2D space.
@@ -102,6 +103,13 @@ export class PhysicalBody {
    */
   thrust(force: number, angle: number = this.angle) {
     physics.applyAngleForce(this.acceleration, angle, force, this.mass);
+  }
+
+  /**
+   * Points the body towards a target point
+   */
+  pointAt(target: Point) {
+    this.angle = radiansBetweenPoints(this.position, target);
   }
 
   collideWithBody(other: PhysicalBody): boolean {
