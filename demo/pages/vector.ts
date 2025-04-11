@@ -2,7 +2,7 @@ import * as vector from '../../src/vector';
 import * as point from '../../src/point';
 import * as angle from '../../src/angle';
 import { DemoFunction } from './index';
-import { clearCanvas, drawPoint, drawLine, drawResults, drawArrow, drag, move, key, drawCircle, animate, drawCentered, drawAxes, drawWithOffset } from '../utils';
+import { clearCanvas, drawPoint, drawLine, drawResults, drawArrow, drag, move, key, drawCircle, animate, drawAxes, drawWithOffset } from '../utils';
 
 export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
     zero: (canvas) => {
@@ -233,11 +233,12 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
         draw();
     },
 
-    clampLength: (canvas) => {
+    clamp: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         const center = { x: canvas.width / 2, y: canvas.height / 2 };
         const origin = { x: 0, y: 0 };
         let v = { x: 100, y: 0 };
+        let minLength = 50;
         let maxLength = 100;
 
         function draw() {
@@ -245,16 +246,19 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
             drawWithOffset(ctx, center, (ctx) => {
                 drawAxes(ctx);
                 drawArrow(ctx, origin, v, 'blue');
-                drawArrow(ctx, origin, vector.clampLength(v, maxLength), 'green');
-                drawCircle(ctx, { x: 0, y: 0, radius: maxLength }, 'gray');
+                drawArrow(ctx, origin, vector.clamp(v, minLength, maxLength), 'green');
+                drawCircle(ctx, { x: 0, y: 0, radius: maxLength }, 'gray'); // Max length boundary
+                drawCircle(ctx, { x: 0, y: 0, radius: minLength }, 'lightgray'); // Min length boundary
             });
 
             drawResults(ctx, [
                 ['Vector', v],
                 ['Length', vector.length(v)],
+                ['Min Length', minLength],
                 ['Max Length', maxLength],
                 'Drag arrow to adjust vector',
-                'Use +/- to adjust max length'
+                'Use +/- to adjust max length',
+                'Use [/] to adjust min length'
             ]);
         }
 
@@ -264,7 +268,9 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
 
         key({ canvas, draw }, {
             '+': () => (maxLength += 10),
-            '-': () => (maxLength = Math.max(10, maxLength - 10))
+            '-': () => (maxLength = Math.max(minLength + 10, maxLength - 10)),
+            '[': () => (minLength = Math.max(0, minLength - 10)),
+            ']': () => (minLength = Math.min(maxLength - 10, minLength + 10))
         });
 
         draw();
@@ -591,5 +597,42 @@ export const vectorDemos: Record<keyof typeof vector, DemoFunction> = {
         });
 
         draw();
-    }
+    },
+
+    resize: (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+        const center = { x: canvas.width / 2, y: canvas.height / 2 };
+        const origin = { x: 0, y: 0 };
+        let v = { x: 100, y: 50 };
+        let newLength = 150;
+
+        function draw() {
+            clearCanvas(ctx);
+            drawWithOffset(ctx, center, (ctx) => {
+                drawAxes(ctx);
+                drawArrow(ctx, origin, v, 'blue');
+                drawArrow(ctx, origin, vector.resize(v, newLength), 'green');
+            });
+
+            drawResults(ctx, [
+                ['Vector', v],
+                ['Original Length', vector.length(v)],
+                ['New Length', newLength],
+                ['Resized Vector', vector.resize(v, newLength)],
+                'Drag arrow to adjust vector',
+                'Use +/- to adjust new length'
+            ]);
+        }
+
+        drag({ canvas, draw, center }, {
+            onDrag: (pos) => (v = pos)
+        });
+
+        key({ canvas, draw }, {
+            '+': () => (newLength += 10),
+            '-': () => (newLength = Math.max(10, newLength - 10))
+        });
+
+        draw();
+    },
 };

@@ -71,13 +71,19 @@ export const normalize = (v: Vector2d): Vector2d => {
 };
 
 /**
- * Limits vector length while preserving direction
+ * Clamps vector length between a minimum and maximum value while preserving direction.
+ * @param v The vector to clamp.
+ * @param minLength The minimum length of the vector.
+ * @param maxLength The maximum length of the vector.
  * @example
- * clampLength({x:3,y:4}, 2) // returns {x:1.2,y:1.6}
+ * clampLength({x:3,y:4}, 2, 5) // returns {x:3,y:4} (unchanged)
+ * clampLength({x:3,y:4}, 6, 10) // returns {x:4.5,y:6} (scaled up to min length)
+ * clampLength({x:3,y:4}, 1, 3) // returns {x:1.8,y:2.4} (scaled down to max length)
  */
-export const clampLength = (v: Vector2d, maxLength: number): Vector2d => {
-  const len = length(v);
-  return len > maxLength ? scale(normalize(v), maxLength) : v;
+export const clamp = (v: Vector2d, minLength: number, maxLength: number): Vector2d => {
+    const len = length(v);
+    const clampedLength = Math.max(minLength, Math.min(maxLength, len));
+    return scale(normalize(v), clampedLength);
 };
 
 /**
@@ -179,4 +185,15 @@ export const rotateByDegrees = (v: Vector2d, angleDegrees: number): Vector2d =>
  */
 export const dot = (v1: Vector2d, v2: Vector2d): number => 
   v1.x * v2.x + v1.y * v2.y;
+
+/**
+ * Resizes a vector to a specified length while preserving its direction.
+ * @param v The vector to resize.
+ * @param newLength The desired length of the vector.
+ * @example
+ * resize({x:3, y:4}, 10) // returns {x:6, y:8}
+ */
+export const resize = (v: Vector2d, newLength: number): Vector2d => {
+    return scale(normalize(v), newLength);
+};
 

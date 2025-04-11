@@ -2,7 +2,7 @@ import { PhysicalBody, Vector2d } from '../../src';
 import { DemoFunction } from './index';
 import * as point from '../../src/point';
 import * as vector from '../../src/vector';
-import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults } from '../utils';
+import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults, drawLine } from '../utils';
 
 
 export const bodyDemos: Record<string, DemoFunction> = {
@@ -136,9 +136,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 lastPos.y = mousePos.y;
                 mousePos.x = pos.x;
                 mousePos.y = pos.y;
-                const currentTime = performance.now();
-                const dt = (currentTime - lastTime) / 1000; // Convert to seconds
-                lastTime = currentTime;
+                lastTime = performance.now();
                 
                 if (draggedBall) {
                     draggedBall.position = vector.subtract(mousePos, draggedBall.grabOffset);
@@ -185,11 +183,20 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 this.radius = 15;
                 this.color = color;
                 this.elasticity = 0.95;
-                this.friction = .01;
+                this.friction = 0.01;
             }
         }
         
         const balls: BilliardBall[] = [];
+        const pockets = [
+            { x: 20, y: 20 }, // Top-left
+            { x: canvas.width / 2, y: 20 }, // Top-center
+            { x: canvas.width - 20, y: 20 }, // Top-right
+            { x: 20, y: canvas.height - 20 }, // Bottom-left
+            { x: canvas.width / 2, y: canvas.height - 20 }, // Bottom-center
+            { x: canvas.width - 20, y: canvas.height - 20 } // Bottom-right
+        ];
+        const pocketRadius = 25;
         const colors = [
             'white',       // cue
             'gold',        // 1
@@ -211,104 +218,102 @@ export const bodyDemos: Record<string, DemoFunction> = {
         let draggedBall: BilliardBall | null = null;
         const mousePos: Vector2d = { x: 0, y: 0 };
         const dragStart: Vector2d = { x: 0, y: 0 };
-        
-        // Create rack of balls
-        balls.push(new BilliardBall(200, canvas.height/2, colors[0])); // Cue ball
-        let row = 0;
-        let idx = 1;
-        for (let y = -2; y <= 2; y++) {
-            for (let x = 0; x <= row; x++) {
-                if (idx < colors.length) {
-                    balls.push(new BilliardBall(
-                        600 + x * 30 - row * 15,
-                        canvas.height/2 + y * 30,
-                        colors[idx++]
-                    ));
+
+        const resetBalls = () => {
+            balls.length = 0;
+            balls.push(new BilliardBall(200, canvas.height / 2, colors[0])); // Cue ball
+            let row = 0;
+            let idx = 1;
+            for (let y = -2; y <= 2; y++) {
+                for (let x = 0; x <= row; x++) {
+                    if (idx < colors.length) {
+                        balls.push(new BilliardBall(
+                            600 + x * 30 - row * 15,
+                            canvas.height / 2 + y * 30,
+                            colors[idx++]
+                        ));
+                    }
                 }
+                row++;
             }
-            row++;
-        }
-        
+        };
+
+        resetBalls();
+
         const update = (deltaTime: number) => {
             balls.forEach(ball => {
                 ball.update(deltaTime);
                 
                 // Cushion collisions
-                const padding = 5;
-                ball.collideWithSurface({ x: 1, y: 0 }, { x: padding, y: ball.y });
-                ball.collideWithSurface({ x: -1, y: 0 }, { x: canvas.width - padding, y: ball.y });
-                ball.collideWithSurface({ x: 0, y: 1 }, { x: ball.x, y: padding });
-                ball.collideWithSurface({ x: 0, y: -1 }, { x: ball.x, y: canvas.height - padding });
+                const wallPadding = 10;
+                ball.collideWithSurface({ x: wallPadding, y: 0 }, { x: 1, y: 0 }); // Left wall
+                ball.collideWithSurface({ x: canvas.width - wallPadding, y: 0 }, { x: -1, y: 0 }); // Right wall
+                ball.collideWithSurface({ x: 0, y: wallPadding }, { x: 0, y: 1 }); // Top wall
+                ball.collideWithSurface({ x: 0, y: canvas.height - wallPadding }, { x: 0, y: -1 }); // Bottom wall
             });
-            
+
             // Ball collisions
             balls.forEach((b1, i) => {
                 balls.slice(i + 1).forEach(b2 => {
                     b1.collideWithBody(b2);
                 });
             });
+
+            // Check for balls in pockets
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const ball = balls[i];
+                const inPocket = pockets.some(pocket => 
+                    point.distance(ball.position, pocket) < pocketRadius
+                );
+
+                if (inPocket) {
+                    if (ball.color === 'white') {
+                        // Reset cue ball to starting position
+                        ball.position = { x: 200, y: canvas.height / 2 };
+                        ball.velocity = vector.fromAngleRadians(Math.random() * Math.PI * 2, 50);
+                    } else {
+                        balls.splice(i, 1); // Remove ball
+                    }
+                }
+            }
         };
         
         const draw = () => {
             clearCanvas(ctx);
-            
-            // Draw table
-            ctx.fillStyle = '#076324';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
+
+            // Draw wooden frame
+            const wallPadding = 10; // Match wall padding
+            drawRect(ctx, { x: 0, y: 0, width: canvas.width, height: canvas.height }, 'brown', true); // Outer frame
+            drawRect(ctx, { x: wallPadding, y: wallPadding, width: canvas.width - 2 * wallPadding, height: canvas.height - 2 * wallPadding }, 'darkgreen', true); // Inner table
+
+            // Draw pockets
+            pockets.forEach(pocket => {
+                drawCircle(ctx, { x: pocket.x, y: pocket.y, radius: pocketRadius }, 'black', true);
+            });
+
             // Draw balls
             balls.forEach(ball => {
-                if (ball.color.startsWith('striped-')) {
-                    // Draw striped ball
-                    const baseColor = ball.color.substring(8);
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = 'white';
-                    ctx.fill();
-                    // Add stripes
-                    ctx.beginPath();
-                    ctx.arc(ball.x, ball.y, ball.radius, -Math.PI/3, Math.PI/3);
-                    ctx.arc(ball.x, ball.y, ball.radius, Math.PI*2/3, Math.PI*4/3);
-                    ctx.fillStyle = baseColor;
-                    ctx.fill();
-                    ctx.restore();
-                } else {
-                    // Draw solid ball
-                    drawCircle(ctx, ball, ball.color, true);
-                }
+                drawCircle(ctx, ball, ball.color, true);
             });
-            
+
             // Draw aiming line
             if (draggedBall) {
                 const pullBack = vector.subtract(dragStart, mousePos);
-                const maxPower = 200;
-                const power = Math.min(vector.length(pullBack), maxPower) / maxPower;
                 const aimLine = vector.scale(pullBack, 2);
-                
+
                 // Draw power gauge
-                ctx.beginPath();
-                ctx.moveTo(draggedBall.position.x, draggedBall.position.y);
-                ctx.lineTo(
-                    draggedBall.position.x + aimLine.x,
-                    draggedBall.position.y + aimLine.y
-                );
-                ctx.strokeStyle = `rgba(255, 255, 255, ${power})`;
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
+                drawLine(ctx, { start: draggedBall.position, end: vector.add(draggedBall.position, aimLine) }, 'rgba(255, 255, 255, .25)', 2);
+
                 // Draw direction indicator
-                ctx.beginPath();
-                ctx.arc(
-                    draggedBall.position.x + aimLine.x,
-                    draggedBall.position.y + aimLine.y,
-                    2,
-                    0,
-                    Math.PI * 2
-                );
-                ctx.fillStyle = 'white';
-                ctx.fill();
+                drawCircle(ctx, { x: draggedBall.position.x + aimLine.x, y: draggedBall.position.y + aimLine.y, radius: 2 }, 'white', true);
             }
+
+            // Show results
+            drawResults(ctx, [
+                ['Number of Balls', balls.length],
+                'Drag the cue ball to aim and shoot',
+                'Press R to reset'
+            ]);
         };
         
         drag({ canvas, draw }, {
@@ -329,14 +334,16 @@ export const bodyDemos: Record<string, DemoFunction> = {
             onEnd: () => {
                 if (draggedBall) {
                     const pullBack = vector.subtract(dragStart, mousePos);
-                    const maxPower = 200;
-                    const power = Math.min(vector.length(pullBack), maxPower) / maxPower;
-                    draggedBall.velocity = vector.scale(pullBack, power * 2);
+                    draggedBall.velocity = vector.add(draggedBall.velocity, vector.scale(pullBack, 10));
                     draggedBall = null;
                 }
             }
         });
         
+        key({ canvas, draw }, {
+            'r': resetBalls,
+        });
+
         return simulate(update, draw);
     },
 
