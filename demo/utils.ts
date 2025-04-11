@@ -124,6 +124,7 @@ export function drawResults(
 type HandlerContext = {
     canvas: HTMLCanvasElement;
     draw?: () => void;
+    center?: Point; // Optional center point for offsetting mouse positions
 };
 
 type DragHandler = {
@@ -132,25 +133,45 @@ type DragHandler = {
     onEnd?: (pos: Point) => void;
 };
 
-export function drag({ canvas, draw }: HandlerContext, handlers: DragHandler) {
+/**
+ * Calculates the mouse position offset by a given center point.
+ * @param canvas The canvas element.
+ * @param evt The mouse event.
+ * @param center The point to offset the mouse position by.
+ * @returns The offset mouse position.
+ */
+export function getOffsetMousePos(canvas: HTMLCanvasElement, evt: MouseEvent, center: Point = { x: 0, y: 0 }): Point {
+    const pos = getMousePos(canvas, evt);
+    return {
+        x: pos.x - center.x,
+        y: pos.y - center.y,
+    };
+}
+
+/**
+ * Adds drag event listeners to the canvas and optionally offsets the mouse position by a center point.
+ * @param context The handler context containing the canvas, optional draw function, and optional center.
+ * @param handlers The drag event handlers.
+ */
+export function drag({ canvas, draw, center = { x: 0, y: 0 } }: HandlerContext, handlers: DragHandler) {
     let isDragging = false;
 
     canvas.addEventListener('mousedown', (e) => {
         isDragging = true;
-        handlers.onStart?.(getMousePos(canvas, e)) ?? handlers.onDrag?.(getMousePos(canvas, e));
+        handlers.onStart?.(getOffsetMousePos(canvas, e, center)) ?? handlers.onDrag?.(getOffsetMousePos(canvas, e, center));
         draw?.();
     });
 
     canvas.addEventListener('mousemove', (e) => {
         if (isDragging) {
-            handlers.onDrag?.(getMousePos(canvas, e));
+            handlers.onDrag?.(getOffsetMousePos(canvas, e, center));
             draw?.();
         }
     });
 
     canvas.addEventListener('mouseup', (e) => {
         if (isDragging) {
-            handlers.onEnd?.(getMousePos(canvas, e));
+            handlers.onEnd?.(getOffsetMousePos(canvas, e, center));
             isDragging = false;
             draw?.();
         }
@@ -158,23 +179,33 @@ export function drag({ canvas, draw }: HandlerContext, handlers: DragHandler) {
 
     canvas.addEventListener('mouseleave', (e) => {
         if (isDragging) {
-            handlers.onEnd?.(getMousePos(canvas, e));
+            handlers.onEnd?.(getOffsetMousePos(canvas, e, center));
             isDragging = false;
             draw?.();
         }
     });
 }
 
-export function click({ canvas, draw }: HandlerContext, handler: (pos: Point) => void) {
+/**
+ * Adds a click event listener to the canvas and optionally offsets the mouse position by a center point.
+ * @param context The handler context containing the canvas, optional draw function, and optional center.
+ * @param handler The click event handler.
+ */
+export function click({ canvas, draw, center = { x: 0, y: 0 } }: HandlerContext, handler: (pos: Point) => void) {
     canvas.addEventListener('click', (e) => {
-        handler(getMousePos(canvas, e));
+        handler(getOffsetMousePos(canvas, e, center));
         draw?.();
     });
 }
 
-export function move({ canvas, draw }: HandlerContext, handler: (pos: Point) => void) {
+/**
+ * Adds a mousemove event listener to the canvas and optionally offsets the mouse position by a center point.
+ * @param context The handler context containing the canvas, optional draw function, and optional center.
+ * @param handler The mousemove event handler.
+ */
+export function move({ canvas, draw, center = { x: 0, y: 0 } }: HandlerContext, handler: (pos: Point) => void) {
     canvas.addEventListener('mousemove', (e) => {
-        handler(getMousePos(canvas, e));
+        handler(getOffsetMousePos(canvas, e, center));
         draw?.();
     });
 }
@@ -235,4 +266,41 @@ export function stop() {
         cancelAnimationFrame(currentAnimation);
         currentAnimation = null;
     }
+}
+
+/**
+ * Executes a drawing function with the canvas context translated by a given offset.
+ * @param ctx The canvas rendering context.
+ * @param center The point to offset the context by.
+ * @param drawFn The drawing function to execute.
+ */
+export function drawWithOffset(ctx: CanvasRenderingContext2D, center: Point, drawFn: (ctx: CanvasRenderingContext2D) => void) {
+    ctx.save();
+    ctx.translate(center.x, center.y);
+    drawFn(ctx);
+    ctx.restore();
+}
+
+/**
+ * Draws axes centered around (0,0).
+ * @param ctx The canvas rendering context.
+ */
+export function drawAxes(ctx: CanvasRenderingContext2D) {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+
+    ctx.strokeStyle = 'lightgray';
+    ctx.lineWidth = 1;
+
+    // Draw horizontal axis
+    ctx.beginPath();
+    ctx.moveTo(-width / 2, 0);
+    ctx.lineTo(width / 2, 0);
+    ctx.stroke();
+
+    // Draw vertical axis
+    ctx.beginPath();
+    ctx.moveTo(0, -height / 2);
+    ctx.lineTo(0, height / 2);
+    ctx.stroke();
 }
