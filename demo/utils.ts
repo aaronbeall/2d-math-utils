@@ -108,16 +108,25 @@ function formatValue(value: ResultValue, precision = 2): string {
 export function drawResults(
     ctx: CanvasRenderingContext2D, 
     results: ResultEntry[], 
-    x = 10, 
-    y = 20, 
-    spacing = 20,
-    precision = 2
+    {
+        x = 10, 
+        y = 20, 
+        spacing = 20,
+        precision = 2,
+        color = 'black'
+    }: { 
+        x?: number; 
+        y?: number; 
+        spacing?: number; 
+        precision?: number; 
+        color?: string 
+    } = {}
 ) {
     results.forEach((entry, i) => {
         const text = Array.isArray(entry)
             ? `${entry[0]}: ${formatValue(entry[1], precision)}`
             : entry;
-        drawText(ctx, text, x, y + i * spacing, Array.isArray(entry) ? entry[2] : undefined);
+        drawText(ctx, text, x, y + i * spacing, (Array.isArray(entry) && entry[2]) || color);
     });
 }
 

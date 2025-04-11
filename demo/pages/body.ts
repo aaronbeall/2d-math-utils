@@ -228,8 +228,9 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 for (let x = 0; x <= row; x++) {
                     if (idx < colors.length) {
                         balls.push(new BilliardBall(
-                            600 + x * 30 - row * 15,
-                            canvas.height / 2 + y * 30,
+                            // Centered along the midline x-axis, facing left
+                            550 + row * 15, 
+                            canvas.height / 2 + x * 30 - row * 15,
                             colors[idx++]
                         ));
                     }
@@ -313,7 +314,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 ['Number of Balls', balls.length],
                 'Drag the cue ball to aim and shoot',
                 'Press R to reset'
-            ]);
+            ], { color: 'white' });
         };
         
         drag({ canvas, draw }, {
