@@ -641,6 +641,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 ['Score', score],
                 ['Angle', angle.radiansToDegrees(cannon.angle)],
                 ['Power', cannon.charging ? cannon.calculatePower() : cannon.power],
+                "Click and hold to charge cannon",
             ]);
         };
         
@@ -695,7 +696,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 super({ x, y, mass: radius * 10 });
                 this.radius = radius;
                 this.elasticity = 0.8;
-                this.friction = 0.5;
+                this.friction = 0.2;
             }
         }
 
@@ -811,7 +812,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
             // Render speed in the output
             drawResults(ctx, [
                 ['Speed', tank.speed],
-                "Up/Down: Throttle Forward/Backward",
+                "Arrow Keys: Rotate and Throttle",
                 "Click to Fire",
             ]);
         };
