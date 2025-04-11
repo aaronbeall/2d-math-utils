@@ -83,8 +83,8 @@ export function drawArc(ctx: CanvasRenderingContext2D, center: Point, radius: nu
     ctx.stroke();
 }
 
-type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line;
-type ResultEntry = string | [label: string, value: ResultValue, color?: string];
+export type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line;
+export type ResultEntry = string | [label: string, value: ResultValue, color?: string];
 
 function formatValue(value: ResultValue, precision = 2): string {
     const num = (n: number) => n.toFixed(precision);

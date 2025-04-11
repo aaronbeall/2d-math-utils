@@ -103,8 +103,8 @@ export const lineRectIntersection = (line: Line, rect: Rectangle): Point[] => {
  */
 export const rotateLine = (line: Line, angleRadians: number, center: Point = midpoint(line.start, line.end)): Line => {
   return {
-    start: rotateByRadians(subtract(line.start, center), angleRadians),
-    end: rotateByRadians(subtract(line.end, center), angleRadians),
+    start: add(rotateByRadians(subtract(line.start, center), angleRadians), center),
+    end: add(rotateByRadians(subtract(line.end, center), angleRadians), center),
   };
 };
 
