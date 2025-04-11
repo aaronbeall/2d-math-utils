@@ -130,34 +130,30 @@ export const rotateAroundByDegrees = (center: Point, point: Point, angleDegrees:
  * Adjusts an angle towards the angle between two points by a specified amount,
  * choosing the shortest rotation path.
  * 
- * @param point - The origin point
- * @param target - The target point
  * @param currentAngleRadians - The current angle in radians
+ * @param targetAngleRadians - The target angle in radians
  * @param rotateAmountRadians - Maximum amount to rotate by in radians
  * @returns The new angle in radians
  */
 export const rotateAngleTowardsRadians = (
-  point: Point,
-  target: Point,
   currentAngleRadians: number,
+  targetAngleRadians: number,
   rotateAmountRadians: number
 ): number => {
-  const targetAngle = radiansBetweenPoints(point, target);
-  
   // Normalize angles to [0, 2π]
   const current = ((currentAngleRadians % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-  const normalizedTarget = ((targetAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-  
+  const normalizedTarget = ((targetAngleRadians % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
   // Calculate shortest angular distance
   let diff = normalizedTarget - current;
   if (diff > Math.PI) diff -= 2 * Math.PI;
   if (diff < -Math.PI) diff += 2 * Math.PI;
-  
+
   // Clamp rotation to the specified amount
   const rotation = Math.abs(diff) <= rotateAmountRadians 
     ? diff 
     : Math.sign(diff) * rotateAmountRadians;
-  
+
   return current + rotation;
 };
 
@@ -165,23 +161,20 @@ export const rotateAngleTowardsRadians = (
  * Adjusts an angle towards the angle between two points by a specified amount,
  * choosing the shortest rotation path.
  * 
- * @param point - The origin point
- * @param target - The target point
  * @param currentAngleDegrees - The current angle in degrees
+ * @param targetAngleDegrees - The target angle in degrees
  * @param rotateAmountDegrees - Maximum amount to rotate by in degrees
  * @returns The new angle in degrees
  */
 export const rotateAngleTowardsDegrees = (
-  point: Point,
-  target: Point,
   currentAngleDegrees: number,
+  targetAngleDegrees: number,
   rotateAmountDegrees: number
 ): number => {
   return radiansToDegrees(
     rotateAngleTowardsRadians(
-      point,
-      target,
       degreesToRadians(currentAngleDegrees),
+      degreesToRadians(targetAngleDegrees),
       degreesToRadians(rotateAmountDegrees)
     )
   );

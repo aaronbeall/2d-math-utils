@@ -3,7 +3,7 @@ import { angle, PhysicalBody, Point, Vector2d } from '../../src';
 import { DemoFunction } from './index';
 import * as point from '../../src/point';
 import * as vector from '../../src/vector';
-import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults, drawLine, keys, drawPoint, move, click, drawArrow } from '../utils';
+import { animate, clearCanvas, drawCircle, drawRect, simulate, drag, key, drawResults, drawLine, keys, drawPoint, move, click, drawArrow, drawWithOffset } from '../utils';
 
 
 export const bodyDemos: Record<string, DemoFunction> = {
@@ -654,6 +654,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
             angle = 0;
             turretAngle = 0;
             speed = 0;
+            turretRotationSpeed = 5;
             
             constructor() {
                 super({ x: canvas.width/2, y: canvas.height/2, mass: 5 });
@@ -661,8 +662,16 @@ export const bodyDemos: Record<string, DemoFunction> = {
             }
             
             update(deltaTime: number) {
-                const velocity = vector.fromAngleRadians(this.angle, this.speed);
-                this.velocity = velocity;
+                // Update turret angle based on mouse position
+                const mouseTargetAngle = angle.radiansBetweenPoints(this.position, mousePos);
+                this.turretAngle = angle.rotateAngleTowardsRadians(this.turretAngle, mouseTargetAngle, this.turretRotationSpeed * deltaTime);
+
+                // Tank movement -- always move in the direction of the tank's angle
+                this.velocity = vector.fromAngleRadians(tank.angle, tank.speed);
+                
+                // Apply drag
+                this.speed *= 0.99;
+
                 super.update(deltaTime);
             }
         }
@@ -672,9 +681,8 @@ export const bodyDemos: Record<string, DemoFunction> = {
             
             constructor(position: Vector2d, angle: number) {
                 super({
-                    ...position,
-                    velocity: vector.fromAngleRadians(angle, 500),
-                    mass: 0.1
+                    position,
+                    velocity: vector.fromAngleRadians(angle, 500)
                 });
                 this.radius = 3;
             }
@@ -682,54 +690,48 @@ export const bodyDemos: Record<string, DemoFunction> = {
         
         const tank = new Tank();
         const bullets: Bullet[] = [];
-        const keys = new Set<string>();
-        const mousePos: Vector2d = { x: 0, y: 0 };
-        
-        canvas.addEventListener('mousemove', e => {
-            mousePos.x = e.offsetX;
-            mousePos.y = e.offsetY;
+        const mousePos: Point = { x: 0, y: 0 };
+
+        // Use move() to update turret angle based on mouse position
+        move({ canvas, draw }, (pos) => {
+            mousePos.x = pos.x;
+            mousePos.y = pos.y;
         });
-        
-        canvas.addEventListener('click', () => {
+
+        // Use click() to fire bullets
+        click({ canvas, draw }, () => {
             const bulletPos = vector.add(
                 tank.position,
                 vector.fromAngleRadians(tank.turretAngle, tank.radius)
             );
             bullets.push(new Bullet(bulletPos, tank.turretAngle));
         });
-        
-        window.addEventListener('keydown', e => keys.add(e.key));
-        window.addEventListener('keyup', e => keys.delete(e.key));
-        
+
+        keys.listen();
+
         const update = (deltaTime: number) => {
-            // Tank controls
-            if (keys.has('ArrowLeft')) tank.angle -= 2 * deltaTime;
-            if (keys.has('ArrowRight')) tank.angle += 2 * deltaTime;
-            if (keys.has('ArrowUp')) tank.speed = Math.min(200, tank.speed + 400 * deltaTime);
-            if (keys.has('ArrowDown')) tank.speed = Math.max(-100, tank.speed - 400 * deltaTime);
-            if (!keys.has('ArrowUp') && !keys.has('ArrowDown')) {
-                tank.speed *= 0.95;
-            }
-            
-            // Update turret angle
-            const dx = mousePos.x - tank.position.x;
-            const dy = mousePos.y - tank.position.y;
-            tank.turretAngle = Math.atan2(dy, dx);
-            
-            // Update tank
+            // Tank movement controls using keys.isDown()
+            const turnSpeed = 2;
+            const throttleSpeed = 400;
+            if (keys.isDown('ArrowLeft')) tank.angle -= turnSpeed * deltaTime;
+            if (keys.isDown('ArrowRight')) tank.angle += turnSpeed * deltaTime;
+            if (keys.isDown('ArrowUp')) tank.speed = Math.min(200, tank.speed + throttleSpeed * deltaTime);
+            if (keys.isDown('ArrowDown')) tank.speed = Math.max(-100, tank.speed - throttleSpeed * deltaTime);
+
+            // Tank movement
             tank.update(deltaTime);
-            
+
             // Keep tank in bounds
             tank.position.x = Math.max(tank.radius, Math.min(canvas.width - tank.radius, tank.position.x));
             tank.position.y = Math.max(tank.radius, Math.min(canvas.height - tank.radius, tank.position.y));
-            
+
             // Update bullets
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const bullet = bullets[i];
                 bullet.update(deltaTime);
                 bullet.timeAlive += deltaTime;
-                
-                // Remove old bullets
+
+                // Remove bullets that are too old or out of bounds
                 if (bullet.timeAlive > 2 || 
                     bullet.position.x < 0 || bullet.position.x > canvas.width ||
                     bullet.position.y < 0 || bullet.position.y > canvas.height) {
@@ -737,33 +739,44 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 }
             }
         };
-        
-        const draw = () => {
+
+        function draw() {
             clearCanvas(ctx);
-            
+
             // Draw tank body
-            ctx.save();
-            ctx.translate(tank.position.x, tank.position.y);
-            ctx.rotate(tank.angle);
-            ctx.fillStyle = '#3a3';
-            ctx.fillRect(-25, -15, 50, 30);
-            ctx.restore();
-            
-            // Draw tank turret
-            ctx.save();
-            ctx.translate(tank.position.x, tank.position.y);
-            ctx.rotate(tank.turretAngle);
-            ctx.fillStyle = '#373';
-            ctx.fillRect(0, -5, 30, 10);
-            ctx.restore();
-            
-            // Draw bullets
-            ctx.fillStyle = '#ff0';
-            bullets.forEach(bullet => {
-                drawCircle(ctx, bullet);
+            drawWithOffset(ctx, tank.position, (ctx) => {
+                ctx.rotate(tank.angle);
+                drawRect(ctx, { 
+                    x: -25, 
+                    y: -15, 
+                    width: 50, 
+                    height: 30 
+                }, '#3a3', true);
             });
+
+            // Draw tank turret
+            drawWithOffset(ctx, tank.position, (ctx) => {
+                ctx.rotate(tank.turretAngle);
+                const turretEnd = vector.fromAngleRadians(0, 30);
+                drawLine(ctx, { 
+                    start: { x: 0, y: 0 }, 
+                    end: turretEnd 
+                }, '#373', 10);
+            });
+
+            // Draw bullets
+            bullets.forEach(bullet => {
+                drawCircle(ctx, bullet, "orange", true);
+            });
+
+            // Render speed in the output
+            drawResults(ctx, [
+                ['Speed', tank.speed],
+                "Up/Down: Throttle Forward/Backward",
+                "Click to Fire",
+            ]);
         };
-        
+
         return simulate(update, draw);
     },
 
@@ -795,46 +808,49 @@ export const bodyDemos: Record<string, DemoFunction> = {
         }
         
         const car = new Car();
-        const keys = new Set<string>();
-        
-        window.addEventListener('keydown', e => keys.add(e.key));
-        window.addEventListener('keyup', e => keys.delete(e.key));
-        
+        keys.listen();
+
         const update = (deltaTime: number) => {
-            // Car controls
-            if (keys.has('ArrowLeft')) car.steering = -1;
-            else if (keys.has('ArrowRight')) car.steering = 1;
+            // Car controls using keys.isDown()
+            const steeringSpeed = 1;
+            if (keys.isDown('ArrowLeft')) car.steering = -steeringSpeed;
+            else if (keys.isDown('ArrowRight')) car.steering = steeringSpeed;
             else car.steering = 0;
-            
-            if (keys.has('ArrowUp')) car.speed = Math.min(300, car.speed + 400 * deltaTime);
-            if (keys.has('ArrowDown')) car.speed = Math.max(-100, car.speed - 400 * deltaTime);
-            
+
+            const throttleSpeed = 400;
+            if (keys.isDown('ArrowUp')) car.speed = Math.min(300, car.speed + throttleSpeed * deltaTime);
+            if (keys.isDown('ArrowDown')) car.speed = Math.max(-100, car.speed - throttleSpeed * deltaTime);
+
             car.update(deltaTime);
-            
+
             // Keep car in bounds
             car.position.x = (car.position.x + canvas.width) % canvas.width;
             car.position.y = (car.position.y + canvas.height) % canvas.height;
         };
-        
+
         const draw = () => {
             clearCanvas(ctx);
-            
-            ctx.save();
-            ctx.translate(car.position.x, car.position.y);
-            ctx.rotate(car.angle);
-            
-            // Draw car body
-            ctx.fillStyle = '#d33';
-            ctx.fillRect(-20, -10, 40, 20);
-            
-            // Draw wheels
-            ctx.fillStyle = '#333';
-            ctx.fillRect(-15, -12, 8, 4);
-            ctx.fillRect(-15, 8, 8, 4);
-            ctx.fillRect(7, -12, 8, 4);
-            ctx.fillRect(7, 8, 8, 4);
-            
-            ctx.restore();
+
+            // Draw car body and wheels using drawWithOffset and drawRect
+            drawWithOffset(ctx, car.position, (ctx) => {
+                ctx.rotate(car.angle);
+
+                // Draw car body
+                drawRect(ctx, { x: -20, y: -10, width: 40, height: 20 }, '#d33', true);
+
+                // Draw wheels
+                drawRect(ctx, { x: -15, y: -12, width: 8, height: 4 }, '#333', true);
+                drawRect(ctx, { x: -15, y: 8, width: 8, height: 4 }, '#333', true);
+                drawRect(ctx, { x: 7, y: -12, width: 8, height: 4 }, '#333', true);
+                drawRect(ctx, { x: 7, y: 8, width: 8, height: 4 }, '#333', true);
+            });
+
+            // Render speed and steering in the output
+            drawResults(ctx, [
+                ['Speed', car.speed.toFixed(2)],
+                ['Steering', car.steering.toFixed(2)],
+                "Arrow Keys: Steer and Accelerate",
+            ]);
         };
         
         return simulate(update, draw);

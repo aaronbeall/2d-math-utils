@@ -2,7 +2,7 @@ import { Circle, Point, Vector2d } from './types';
 import * as vector from './vector';
 import * as physics from './physics';
 import { distance } from './point';
-import { radiansBetweenPoints } from './angle';
+import { radiansBetweenPoints, rotateAngleTowardsRadians } from './angle';
 
 /**
  * PhysicalBody class for simulating physical objects in 2D space.
@@ -110,6 +110,17 @@ export class PhysicalBody {
    */
   pointAt(target: Point) {
     this.angle = radiansBetweenPoints(this.position, target);
+  }
+
+  /**
+   * Gradually rotates the body towards a target point at a specified rotation speed.
+   * @param target The target point to rotate towards.
+   * @param rotationSpeed The maximum rotation speed in radians per second.
+   * @param deltaTime The time step for the rotation.
+   */
+  pointTowards(target: Point, rotationSpeed: number) {
+    const targetAngle = radiansBetweenPoints(this.position, target);
+    this.angle = rotateAngleTowardsRadians(this.angle, targetAngle, rotationSpeed);
   }
 
   collideWithBody(other: PhysicalBody): boolean {
