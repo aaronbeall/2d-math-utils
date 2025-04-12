@@ -83,7 +83,8 @@ export function drawArc(ctx: CanvasRenderingContext2D, center: Point, radius: nu
     ctx.stroke();
 }
 
-export type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line;
+export type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line | [string, ResultValue][];
+
 export type ResultEntry = string | [label: string, value: ResultValue, color?: string];
 
 function formatValue(value: ResultValue, precision = 2): string {
@@ -97,6 +98,9 @@ function formatValue(value: ResultValue, precision = 2): string {
     }
     if (typeof value === 'boolean') {
         return value ? '✅ Yes' : '❌ No';
+    }
+    if (Array.isArray(value)) {
+        return `{${ value.map(([k, v]) => `${ k }=${ formatValue(v, precision) }`).join(', ') }}`;
     }
     if ('radius' in value) {
         return `(${num(value.x)}, ${num(value.y)}, r=${num(value.radius)})`;

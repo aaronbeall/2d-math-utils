@@ -926,8 +926,8 @@ export const bodyDemos: Record<string, DemoFunction> = {
 
             // Render speed and steering in the output
             drawResults(ctx, [
-                ['Speed', car.speed.toFixed(2)],
-                ['Steering', car.steering.toFixed(2)],
+                ['Speed', car.speed],
+                ['Steering', car.steering],
                 "Arrow Keys: Steer and Accelerate",
             ]);
         };
