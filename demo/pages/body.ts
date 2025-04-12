@@ -104,7 +104,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
 
             // Show results
             drawResults(ctx, [
-                ['Number of Balls', balls.length],
+                ['Number of Balls', balls.length, { precision: 0 }],
                 ['Overlap Mode', overlapModes[currentOverlapModeIndex]],
                 'Drag balls to move them',
                 'Press +/- to add/remove a ball',
@@ -312,7 +312,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
 
             // Show results
             drawResults(ctx, [
-                ['Number of Balls', balls.length],
+                ['Number of Balls', balls.length, { precision: 0 }],
                 'Drag the cue ball to aim and shoot',
                 'Press R to reset'
             ], { color: 'white' });
@@ -638,7 +638,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
             
             // Draw score and power
             drawResults(ctx, [
-                ['Score', score],
+                ['Score', score, { precision: 0 }],
                 ['Angle', angle.radiansToDegrees(cannon.angle)],
                 ['Power', cannon.charging ? cannon.calculatePower() : cannon.power],
                 "Click and hold to charge cannon",

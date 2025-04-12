@@ -1,9 +1,9 @@
 import { scale, add, clamp } from "./../../src/vector";
 import * as physics from '../../src/physics';
 import { DemoFunction } from './index';
-import { clearCanvas, drawCircle, drawLine, drawResults, drag, animate, click, key, drawWithOffset, drawArrow, ResultEntry } from '../utils';
+import { clearCanvas, drawCircle, drawLine, drawResults, drag, animate, click, key, drawWithOffset, drawArrow, ResultEntry, move } from '../utils';
 import { Line, Point } from '../../src';
-import { fromAngleRadians, subtract } from '../../src/vector';
+import { fromAngleRadians, subtract, normalize } from '../../src/vector';
 import { radiansBetweenPoints } from '../../src/angle';
 import { distance, closest } from '../../src/point';
 
@@ -493,9 +493,15 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
             cohesionRadius: 50,
             separationWeight: 1.5,
             alignmentWeight: 2,
-            cohesionWeight: .1,
-            maxSpeed: .12
+            cohesionWeight: 0.1,
+            maxSpeed: 0.12
         };
+        const wallAvoidanceRadius = 50; // Distance to start avoiding walls
+        const wallAvoidanceWeight = 2;  // Strength of wall avoidance
+
+        const mouseAvoidanceRadius = 100; // Distance to start avoiding the mouse
+        const mouseAvoidanceWeight = 5;   // Strength of mouse avoidance
+        let mousePos: Point | null = null;
 
         const wanderingAngles = Array.from({ length: boids.length }, () => Math.random() * Math.PI * 2);
 
@@ -527,6 +533,10 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
             ]);
         }
 
+        move({ canvas, draw }, (pos) => {
+            mousePos = pos;
+        });
+
         animate(() => {
             const forces = physics.boids(boids, settings);
 
@@ -542,17 +552,41 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
                     b.velocity = add(b.velocity, wanderForce);
                 }
 
+                // Wall avoidance
+                const wallForces = { x: 0, y: 0 };
+                if (b.position.x < wallAvoidanceRadius) {
+                    wallForces.x += wallAvoidanceWeight / Math.max(b.position.x, 1);
+                }
+                if (b.position.x > canvas.width - wallAvoidanceRadius) {
+                    wallForces.x -= wallAvoidanceWeight / Math.max(canvas.width - b.position.x, 1);
+                }
+                if (b.position.y < wallAvoidanceRadius) {
+                    wallForces.y += wallAvoidanceWeight / Math.max(b.position.y, 1);
+                }
+                if (b.position.y > canvas.height - wallAvoidanceRadius) {
+                    wallForces.y -= wallAvoidanceWeight / Math.max(canvas.height - b.position.y, 1);
+                }
+                b.velocity = add(b.velocity, wallForces);
+
+                // Mouse avoidance
+                if (mousePos) {
+                    const mouseDist = distance(b.position, mousePos);
+                    if (mouseDist < mouseAvoidanceRadius) {
+                        const awayFromMouse = normalize(subtract(b.position, mousePos));
+                        const mouseForce = scale(awayFromMouse, mouseAvoidanceWeight / Math.max(mouseDist, 1));
+                        b.velocity = add(b.velocity, mouseForce);
+                    }
+                }
+
                 // Apply damping
                 b.velocity = scale(b.velocity, 0.95);
-                
+
                 // Update position
                 b.position = add(b.position, b.velocity);
 
-                // Wrap around canvas edges
-                if (b.position.x < 0) b.position.x += canvas.width;
-                if (b.position.x > canvas.width) b.position.x -= canvas.width;
-                if (b.position.y < 0) b.position.y += canvas.height;
-                if (b.position.y > canvas.height) b.position.y -= canvas.height;
+                // Prevent boids from leaving the canvas
+                b.position.x = Math.max(0, Math.min(canvas.width, b.position.x));
+                b.position.y = Math.max(0, Math.min(canvas.height, b.position.y));
             });
         }, draw);
     },
