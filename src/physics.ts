@@ -346,7 +346,7 @@ export const boids = (boids: Boid[], rules: BoidRules = {}): Vector2d[] => {
     boids.forEach((other, j) => {
       if (i === j) return;
       
-      const dist = Math.sqrt(distanceSquared(boid.position, other.position));
+      const dist = distance(boid.position, other.position);
       
       // Separation - avoid crowding
       if (dist < separationRadius) {

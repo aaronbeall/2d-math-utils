@@ -1,7 +1,7 @@
-import { scale } from "./../../src/vector";
+import { scale, add, clamp } from "./../../src/vector";
 import * as physics from '../../src/physics';
 import { DemoFunction } from './index';
-import { clearCanvas, drawCircle, drawLine, drawResults, drag, animate, click, key, drawWithOffset, drawArrow } from '../utils';
+import { clearCanvas, drawCircle, drawLine, drawResults, drag, animate, click, key, drawWithOffset, drawArrow, ResultEntry } from '../utils';
 import { Line, Point } from '../../src';
 import { fromAngleRadians, subtract } from '../../src/vector';
 import { radiansBetweenPoints } from '../../src/angle';
@@ -487,27 +487,72 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
             velocity: { x: Math.random() * 2 - 1, y: Math.random() * 2 - 1 }
         }));
 
+        const settings = {
+            separationRadius: 25,
+            alignmentRadius: 50,
+            cohesionRadius: 50,
+            separationWeight: 1.5,
+            alignmentWeight: 2,
+            cohesionWeight: .1,
+            maxSpeed: .12
+        };
+
+        const wanderingAngles = Array.from({ length: boids.length }, () => Math.random() * Math.PI * 2);
+
         function draw() {
             clearCanvas(ctx);
-            boids.forEach(b => drawCircle(ctx, { ...b.position, radius: 5 }, 'blue'));
-            drawResults(ctx, ['Flocking simulation']);
+            boids.forEach(b => {
+                const angle = Math.atan2(b.velocity.y, b.velocity.x);
+                const bodyLength = 20;
+                const bodyWidth = 10;
+
+                // Draw boid as a longer arrow
+                ctx.save();
+                ctx.translate(b.position.x, b.position.y);
+                ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.moveTo(bodyLength / 2, 0); // Arrow tip
+                ctx.lineTo(-bodyLength / 2, -bodyWidth / 2); // Left wing
+                ctx.lineTo(-bodyLength / 2, bodyWidth / 2); // Right wing
+                ctx.closePath();
+                ctx.fillStyle = 'blue';
+                ctx.fill();
+                ctx.strokeStyle = 'black';
+                ctx.stroke();
+                ctx.restore();
+            });
+            drawResults(ctx, [
+                'Flocking simulation',
+                ...Object.entries(settings).map<ResultEntry>(([key, value]) => [key, value]),
+            ]);
         }
 
         animate(() => {
-            const forces = physics.boids(boids, {
-                separationRadius: 25,
-                alignmentRadius: 50,
-                cohesionRadius: 50,
-                separationWeight: 1.5,
-                alignmentWeight: 1,
-                cohesionWeight: 1,
-                maxSpeed: 2
-            });
+            const forces = physics.boids(boids, settings);
+
             boids.forEach((b, i) => {
+                // Apply forces to velocity
                 b.velocity.x += forces[i].x;
                 b.velocity.y += forces[i].y;
-                b.position.x += b.velocity.x;
-                b.position.y += b.velocity.y;
+
+                // Gradual wandering behavior for isolated boids
+                if (forces[i].x === 0 && forces[i].y === 0) {
+                    wanderingAngles[i] += (Math.random() - 0.5) * 0.1; // Gradually change angle
+                    const wanderForce = fromAngleRadians(wanderingAngles[i], settings.maxSpeed);
+                    b.velocity = add(b.velocity, wanderForce);
+                }
+
+                // Apply damping
+                b.velocity = scale(b.velocity, 0.95);
+                
+                // Update position
+                b.position = add(b.position, b.velocity);
+
+                // Wrap around canvas edges
+                if (b.position.x < 0) b.position.x += canvas.width;
+                if (b.position.x > canvas.width) b.position.x -= canvas.width;
+                if (b.position.y < 0) b.position.y += canvas.height;
+                if (b.position.y > canvas.height) b.position.y -= canvas.height;
             });
         }, draw);
     },
