@@ -196,8 +196,8 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
 
         let draggedPosition: Point | null = null;
 
-        const init1: Line = { start: { x: 200, y: 200 }, end: { x: 250, y: 220 } };
-        const init2: Line = { start: { x: 400, y: 200 }, end: { x: 330, y: 210 } };
+        const init1: Line = { start: { x: 200, y: 300 }, end: { x: 250, y: 320 } };
+        const init2: Line = { start: { x: 400, y: 300 }, end: { x: 330, y: 310 } };
 
         start();
 
@@ -224,8 +224,10 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
                 'Drag initial positions and velocities',
                 ["Object 1", Object.entries(obj1)],
                 ["Object 2", Object.entries(obj2)],
+                ['Restitution', restitution],
                 'Press +/- to adjust mass of first object',
                 'Press [/] to adjust mass of second object',
+                'Press 1/2 to adjust restitution',
                 'Press R to replay simulation',
             ]);
         }
@@ -261,22 +263,16 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
         });
 
         key({ canvas, draw }, {
-            'r': () => {
-                start();
-            },
-            '+': () => {
-                obj1.mass = Math.min(obj1.mass + 0.1, 10); // Cap mass at 10
-            },
-            '-': () => {
-                obj1.mass = Math.max(obj1.mass - 0.1, 0.1); // Ensure mass is at least 0.1
-            },
-            '[': () => {
-                obj2.mass = Math.max(obj2.mass - 0.1, 0.1); // Ensure mass is at least 0.1
-            },
-            ']': () => {
-                obj2.mass = Math.min(obj2.mass + 0.1, 10); // Cap mass at 10
-            }
+            'r': start,
+            '+': () => obj1.mass += 0.1,
+            '-': () => obj1.mass -= 0.1,
+            '[': () => obj2.mass -= 0.1,
+            ']': () => obj2.mass += 0.1,
+            '1': () => restitution = Math.max(restitution - 0.1, 0), // Decrease restitution
+            '2': () => restitution = Math.min(restitution + 0.1, 1), // Increase restitution
         });
+
+        let restitution = 0.9; // Default restitution
 
         animate(() => {
             if (isSimulationRunning) {
@@ -285,7 +281,7 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
                 obj2.position.x += obj2.velocity.x;
                 obj2.position.y += obj2.velocity.y;
                 if (distance(obj1.position, obj2.position) < obj1.radius + obj2.radius) {
-                    physics.collide(obj1, obj2, 0.9);
+                    physics.collide(obj1, obj2, restitution);
                 }
             }
         }, draw);
