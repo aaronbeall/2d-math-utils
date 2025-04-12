@@ -85,7 +85,7 @@ export function drawArc(ctx: CanvasRenderingContext2D, center: Point, radius: nu
 
 export type ResultValue = number | string | boolean | Point | Circle | Rectangle | Vector2d | Line | [string, ResultValue][];
 
-export type ResultEntry = string | [label: string, value: ResultValue, color?: string];
+export type ResultEntry = string | [label: string, value: ResultValue, opts?: { color?: string; precision?: number }];
 
 function formatValue(value: ResultValue, precision = 2): string {
     const num = (n: number) => n.toFixed(precision);
@@ -135,9 +135,9 @@ export function drawResults(
 ) {
     results.forEach((entry, i) => {
         const text = Array.isArray(entry)
-            ? `${entry[0]}: ${formatValue(entry[1], precision)}`
+            ? `${entry[0]}: ${formatValue(entry[1], entry[2]?.precision ?? precision)}`
             : entry;
-        drawText(ctx, text, x, y + i * spacing, (Array.isArray(entry) && entry[2]) || color);
+        drawText(ctx, text, x, y + i * spacing, (Array.isArray(entry) && entry[2]?.color) || color);
     });
 }
 

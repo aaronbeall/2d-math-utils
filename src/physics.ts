@@ -100,12 +100,12 @@ export const separate = (
 
   // Check if there is overlap
   const overlap = obj1.radius + obj2.radius - dist;
-  if (overlap <= 0 || dist === 0) {
-    return; // No overlap or positions are identical
+  if (overlap <= 0) {
+    return; // No overlap
   }
 
-  // Normalize the direction vector
-  const direction = scale(normal, 1 / dist);
+  // Handle case where positions are identical
+  const direction = dist === 0 ? { x: 1, y: 0 } : scale(normal, 1 / dist);
 
   // Calculate the correction vector
   const totalMass = obj1.mass + obj2.mass;

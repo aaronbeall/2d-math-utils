@@ -289,50 +289,107 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
 
     separate: (canvas) => {
         const ctx = canvas.getContext('2d')!;
-        let obj1 = { position: { x: 200, y: 200 }, velocity: { x: 0, y: 0 }, mass: 1, radius: 30 };
-        let obj2 = { position: { x: 220, y: 200 }, velocity: { x: 0, y: 0 }, mass: 1, radius: 30 };
+        const objects = Array.from({ length: 5 }, () => createRandomObject());
+
+        function createRandomObject(position: Point = {
+            x: canvas.width / 2 + Math.random() * 50 - 25, // Clustered around the center
+            y: canvas.height / 2 + Math.random() * 50 - 25
+        }): { position: Point; velocity: Point; mass: number; radius: number } {
+            const radius = Math.random() * 20 + 10; // Random radius between 10 and 30
+            return {
+                position,
+                velocity: { x: 0, y: 0 },
+                mass: radius / 10, // Mass proportional to radius
+                radius,
+            };
+        }
 
         function draw() {
             clearCanvas(ctx);
-            drawCircle(ctx, { ...obj1.position, radius: obj1.radius }, 'blue');
-            drawCircle(ctx, { ...obj2.position, radius: obj2.radius }, 'red');
+            objects.forEach(obj => {
+                drawCircle(ctx, { ...obj.position, radius: obj.radius }, 'blue');
+            });
             drawResults(ctx, [
-                ['Object 1 Position', obj1.position],
-                ['Object 2 Position', obj2.position],
-                'Objects separate if overlapping'
+                'Click to add a new random size object'
             ]);
         }
 
         animate(() => {
-            physics.separate(obj1, obj2);
+            for (let i = 0; i < objects.length; i++) {
+                for (let j = i + 1; j < objects.length; j++) {
+                    physics.separate(objects[i], objects[j]);
+                }
+            }
         }, draw);
+
+        click({ canvas, draw }, (pos) => {
+            const noise = () => Math.random() * 2 - 1; // Random noise between -1 and 1
+            const noisyPos = { x: pos.x + noise(), y: pos.y + noise() };
+            objects.push(createRandomObject(noisyPos));
+        });
     },
 
     repel: (canvas) => {
         const ctx = canvas.getContext('2d')!;
-        let obj1 = { position: { x: 200, y: 200 }, velocity: { x: 0, y: 0 }, mass: 1, radius: 30 };
-        let obj2 = { position: { x: 220, y: 200 }, velocity: { x: 0, y: 0 }, mass: 1, radius: 30 };
+        const objects = Array.from({ length: 5 }, () => createRandomObject());
+
+        let repelStrength = 0.001;
+        let friction = 0.99;
+
+        function createRandomObject(position: Point = {
+            x: canvas.width / 2 + Math.random() * 50 - 25, // Clustered around the center
+            y: canvas.height / 2 + Math.random() * 50 - 25
+        }): { position: Point; velocity: Point; mass: number; radius: number } {
+            const radius = Math.random() * 20 + 10; // Random radius between 10 and 30
+            return {
+                position,
+                velocity: { x: 0, y: 0 },
+                mass: radius / 10, // Mass proportional to radius
+                radius,
+            };
+        }
 
         function draw() {
             clearCanvas(ctx);
-            drawCircle(ctx, { ...obj1.position, radius: obj1.radius }, 'blue');
-            drawCircle(ctx, { ...obj2.position, radius: obj2.radius }, 'red');
+            objects.forEach(obj => {
+                drawCircle(ctx, { ...obj.position, radius: obj.radius }, 'red');
+            });
             drawResults(ctx, [
-                ['Object 1 Position', obj1.position],
-                ['Object 1 Velocity', obj1.velocity],
-                ['Object 2 Position', obj2.position],
-                ['Object 2 Velocity', obj2.velocity],
-                'Objects repel if overlapping'
+                'Click to add a new random size object',
+                [`Repel Strength:`, repelStrength, { precision: 4 }],
+                [`Friction`, friction],
             ]);
         }
 
         animate(() => {
-            physics.repel(obj1, obj2, 0.5);
-            obj1.position.x += obj1.velocity.x;
-            obj1.position.y += obj1.velocity.y;
-            obj2.position.x += obj2.velocity.x;
-            obj2.position.y += obj2.velocity.y;
+            for (let i = 0; i < objects.length; i++) {
+                for (let j = i + 1; j < objects.length; j++) {
+                    physics.repel(objects[i], objects[j], repelStrength);
+                }
+            }
+            // Update positions based on velocities
+            objects.forEach(obj => {
+                obj.position.x += obj.velocity.x;
+                obj.position.y += obj.velocity.y;
+
+                // Apply drag to slow down the velocity
+                obj.velocity.x *= friction;
+                obj.velocity.y *= friction;
+            });
         }, draw);
+
+        key({ canvas, draw }, {
+            '+': () => repelStrength += .001,
+            '-': () => repelStrength -= .001,
+            '[': () => friction -= .01,
+            ']': () => friction += 0.1
+        });
+
+        click({ canvas, draw }, (pos) => {
+            const noise = () => Math.random() * 2 - 1; // Random noise between -1 and 1
+            const noisyPos = { x: pos.x + noise(), y: pos.y + noise() };
+            objects.push(createRandomObject(noisyPos));
+        });
     },
 
     fluid: (canvas) => {
