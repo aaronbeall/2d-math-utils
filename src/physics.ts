@@ -196,56 +196,95 @@ interface FluidParticle {
  */
 export const fluid = (
   particles: FluidParticle[],
-  smoothingRadius: number = 30,
-  stiffness: number = 50,
-  restDensity: number = 1,
-  viscosity: number = 0.1
+  {
+    smoothingRadius = 30,
+    stiffness = 50,
+    restDensity = 1,
+    viscosity = 0.1
+  }: {
+    smoothingRadius?: number;
+    stiffness?: number;
+    restDensity?: number;
+    viscosity?: number;
+  } = {}
 ): Vector2d[] => {
   const forces = particles.map(() => ({ x: 0, y: 0 }));
-  
+  const gridSize = smoothingRadius; // Size of each grid cell
+  const grid: Record<string, FluidParticle[]> = {};
+
+  // Helper to compute grid key
+  const getGridKey = (x: number, y: number) => `${Math.floor(x / gridSize)},${Math.floor(y / gridSize)}`;
+
+  // Populate the grid
+  particles.forEach(p => {
+    const key = getGridKey(p.position.x, p.position.y);
+    if (!grid[key]) grid[key] = [];
+    grid[key].push(p);
+  });
+
   // Calculate densities
   particles.forEach(p => {
     p.density = 0;
-    particles.forEach(neighbor => {
-      const dist = Math.sqrt(distanceSquared(p.position, neighbor.position));
-      if (dist < smoothingRadius) {
-        // Simple density kernel
-        p.density += neighbor.mass * (1 - dist / smoothingRadius);
+    const key = getGridKey(p.position.x, p.position.y);
+
+    // Check neighboring cells
+    const [gx, gy] = key.split(',').map(Number);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const neighborKey = `${gx + dx},${gy + dy}`;
+        const neighbors = grid[neighborKey] || [];
+        neighbors.forEach(neighbor => {
+          const dist = Math.sqrt(distanceSquared(p.position, neighbor.position));
+          if (dist < smoothingRadius) {
+            p.density += neighbor.mass * (1 - dist / smoothingRadius);
+          }
+        });
       }
-    });
+    }
+
     // Calculate pressure from density
     p.pressure = stiffness * (p.density - restDensity);
   });
 
   // Calculate forces
   particles.forEach((p, i) => {
-    particles.forEach(neighbor => {
-      if (p === neighbor) return;
-      
-      const dist = distance(p.position, neighbor.position);
-      if (dist < smoothingRadius) {
-        // Direction from p to neighbor
-        const dir = normalize(subtract(neighbor.position, p.position));
-        
-        // Pressure force (repels particles in compressed regions)
-        const pressureForce = scale(dir, 
-          -(p.pressure + neighbor.pressure) * 
-          (1 - dist / smoothingRadius) / 
-          (2 * p.density * neighbor.density)
-        );
-        
-        // Viscosity force (averages out velocities)
-        const relativeVel = subtract(neighbor.velocity, p.velocity);
-        const viscosityForce = scale(relativeVel, 
-          viscosity * (1 - dist / smoothingRadius) / 
-          (p.density * neighbor.density)
-        );
-        
-        forces[i] = add(forces[i], scale(add(pressureForce, viscosityForce), p.mass * neighbor.mass));
+    const key = getGridKey(p.position.x, p.position.y);
+
+    // Check neighboring cells
+    const [gx, gy] = key.split(',').map(Number);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const neighborKey = `${gx + dx},${gy + dy}`;
+        const neighbors = grid[neighborKey] || [];
+        neighbors.forEach(neighbor => {
+          if (p === neighbor) return;
+
+          const dist = distance(p.position, neighbor.position);
+          if (dist < smoothingRadius) {
+            // Direction from p to neighbor
+            const dir = normalize(subtract(neighbor.position, p.position));
+
+            // Pressure force (repels particles in compressed regions)
+            const pressureForce = scale(dir,
+              -(p.pressure + neighbor.pressure) *
+              (1 - dist / smoothingRadius) /
+              (2 * p.density * neighbor.density)
+            );
+
+            // Viscosity force (averages out velocities)
+            const relativeVel = subtract(neighbor.velocity, p.velocity);
+            const viscosityForce = scale(relativeVel,
+              viscosity * (1 - dist / smoothingRadius) /
+              (p.density * neighbor.density)
+            );
+
+            forces[i] = add(forces[i], scale(add(pressureForce, viscosityForce), p.mass * neighbor.mass));
+          }
+        });
       }
-    });
+    }
   });
-  
+
   return forces;
 };
 

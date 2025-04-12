@@ -356,8 +356,10 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
             });
             drawResults(ctx, [
                 'Click to add a new random size object',
-                [`Repel Strength:`, repelStrength, { precision: 4 }],
+                [`Repel Strength`, repelStrength, { precision: 4 }],
                 [`Friction`, friction],
+                'Use +/- to change repel strength',
+                'Use [/] to change friction',
             ]);
         }
 
@@ -382,7 +384,7 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
             '+': () => repelStrength += .001,
             '-': () => repelStrength -= .001,
             '[': () => friction -= .01,
-            ']': () => friction += 0.1
+            ']': () => friction += .01
         });
 
         click({ canvas, draw }, (pos) => {
@@ -394,29 +396,88 @@ export const physicsDemos: Record<keyof typeof physics, DemoFunction> = {
 
     fluid: (canvas) => {
         const ctx = canvas.getContext('2d')!;
-        const particles = Array.from({ length: 50 }, () => ({
-            position: { x: Math.random() * canvas.width, y: Math.random() * canvas.height },
+        const particles = Array.from({ length: 1500 }, () => ({
+            position: { 
+                x: canvas.width / 2 + Math.random() * 150 - 25, // Clustered near the center
+                y: canvas.height / 2 + Math.random() * 150 - 25 
+            },
             velocity: { x: 0, y: 0 },
             density: 0,
             pressure: 0,
             mass: 1
         }));
 
+        const settings = {
+            smoothingRadius: 15,
+            stiffness: 5,
+            restDensity: 1,
+            viscosity: 0.5
+        }
+
+        const gravity = { x: 0, y: 0.1 }; // Gravity force
+        let lastMousePos: Point | null = null;
+
         function draw() {
             clearCanvas(ctx);
-            particles.forEach(p => drawCircle(ctx, { ...p.position, radius: 5 }, 'blue'));
-            drawResults(ctx, ['Fluid simulation']);
+            particles.forEach(p => drawCircle(ctx, { ...p.position, radius: 5 }, 'blue')); // Reduced radius to 2
+            drawResults(ctx, [
+                'Fluid simulation',
+                ['Particles', particles.length, { precision: 0 }],
+                ['Fluid', Object.entries(settings)],
+                'Click and drag to apply forces',
+            ]);
         }
 
         animate(() => {
-            const forces = physics.fluid(particles, 30, 50, 1, 0.1);
+            const forces = physics.fluid(particles, settings);
             particles.forEach((p, i) => {
+                // Apply fluid forces
                 p.velocity.x += forces[i].x;
                 p.velocity.y += forces[i].y;
+
+                // Apply gravity
+                p.velocity.x += gravity.x;
+                p.velocity.y += gravity.y;
+
+                // Update position
                 p.position.x += p.velocity.x;
                 p.position.y += p.velocity.y;
+
+                // Keep particles within canvas bounds
+                if (p.position.x < 0 || p.position.x > canvas.width) {
+                    p.velocity.x *= -0.5; // Reverse and dampen velocity
+                    p.position.x = Math.max(0, Math.min(canvas.width, p.position.x));
+                }
+                if (p.position.y < 0 || p.position.y > canvas.height) {
+                    p.velocity.y *= -0.5; // Reverse and dampen velocity
+                    p.position.y = Math.max(0, Math.min(canvas.height, p.position.y));
+                }
             });
         }, draw);
+
+        drag({ canvas, draw }, {
+            onStart: (pos) => {
+                lastMousePos = pos;
+            },
+            onDrag: (pos) => {
+                if (lastMousePos) {
+                    const dragForce = 2.5; // Strength of the drag force
+                    const dragVector = subtract(pos, lastMousePos);
+                    particles.forEach(p => {
+                        const dist = distance(p.position, pos);
+                        if (dist < 50) { // Apply force to nearby particles
+                            const force = scale(dragVector, dragForce / (dist + 1)); // Inverse distance weighting
+                            p.velocity.x += force.x;
+                            p.velocity.y += force.y;
+                        }
+                    });
+                }
+                lastMousePos = pos;
+            },
+            onEnd: () => {
+                lastMousePos = null;
+            }
+        });
     },
 
     boids: (canvas) => {
