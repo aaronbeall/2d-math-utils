@@ -2,24 +2,12 @@ import { Line, Circle, Rectangle, Point } from './types';
 import { distance, midpoint } from './point';
 import { rotateByRadians, scale, subtract, add, normalize } from './vector';
 
-/**
- * Calculates the length of a line segment
- * @example
- * const line = { 
- *   start: {x: 0, y: 0}, 
- *   end: {x: 3, y: 4} 
- * };
- * lineLength(line) // returns 5
- */
-export const lineLength = (line: Line): number => {
-  return distance(line.start, line.end);
-};
 
 /**
  * Finds the intersection point of two lines (if any).
  * @returns The intersection point or null if the lines do not intersect.
  */
-export const lineIntersection = (line1: Line, line2: Line): Point | null => {
+export const getLineIntersection = (line1: Line, line2: Line): Point | null => {
   const { start: p1, end: p2 } = line1;
   const { start: p3, end: p4 } = line2;
 
@@ -43,7 +31,7 @@ export const lineIntersection = (line1: Line, line2: Line): Point | null => {
  * Finds the intersection points of a line and a circle (if any).
  * @returns An array of intersection points (0, 1, or 2 points).
  */
-export const lineCircleIntersection = (line: Line, circle: Circle): Point[] => {
+export const getLineCircleIntersections = (line: Line, circle: Circle): Point[] => {
   const { start, end } = line;
   const { x: cx, y: cy, radius } = circle;
 
@@ -75,7 +63,7 @@ export const lineCircleIntersection = (line: Line, circle: Circle): Point[] => {
  * Finds the intersection points of a line and a rectangle (if any).
  * @returns An array of intersection points (0, 1, or 2 points).
  */
-export const lineRectIntersection = (line: Line, rect: Rectangle): Point[] => {
+export const getLineRectIntersections = (line: Line, rect: Rectangle): Point[] => {
   const { x, y, width, height } = rect;
 
   const rectLines: Line[] = [
@@ -87,7 +75,7 @@ export const lineRectIntersection = (line: Line, rect: Rectangle): Point[] => {
 
   const intersections: Point[] = [];
   rectLines.forEach(rectLine => {
-    const intersection = lineIntersection(line, rectLine);
+    const intersection = getLineIntersection(line, rectLine);
     if (intersection) intersections.push(intersection);
   });
 
@@ -95,30 +83,28 @@ export const lineRectIntersection = (line: Line, rect: Rectangle): Point[] => {
 };
 
 /**
- * Rotates a line around a center point.
- * @param line The line to rotate.
- * @param center The center point to rotate around (default is the midpoint of the line).
- * @param angleRadians The angle to rotate by, in radians.
- * @returns A new rotated line.
+ * Checks if two circles overlap.
+ * @returns The depth of overlap or 0 if no overlap.
  */
-export const rotateLine = (line: Line, angleRadians: number, center: Point = midpoint(line.start, line.end)): Line => {
-  return {
-    start: add(rotateByRadians(subtract(line.start, center), angleRadians), center),
-    end: add(rotateByRadians(subtract(line.end, center), angleRadians), center),
-  };
+export const getCircleOverlap = (circle1: Circle, circle2: Circle): number => {
+  const d = distance(circle1, circle2);
+  const overlap = circle1.radius + circle2.radius - d;
+  return overlap > 0 ? overlap : 0; // Return overlap depth or 0 if no overlap
 };
 
 /**
- * Expands a line by a given length, extending it equally in both directions.
- * @param line The line to expand.
- * @param expansionLength The total length to expand the line by.
- * @returns A new expanded line.
+ * Returns the intersection rectangle of two rectangles or null if there is no overlap.
+ * @returns The intersection rectangle or null if there is no overlap.
  */
-export const expandLine = (line: Line, expansionLength: number): Line => {
-  const direction = normalize(subtract(line.end, line.start));
-  const expansion = scale(direction, expansionLength / 2);
-  return {
-    start: subtract(line.start, expansion),
-    end: add(line.end, expansion),
-  };
+export const getRectanglesIntersection = (rect1: Rectangle, rect2: Rectangle): Rectangle | null => {
+  const x = Math.max(rect1.x, rect2.x);
+  const y = Math.max(rect1.y, rect2.y);
+  const width = Math.min(rect1.x + rect1.width, rect2.x + rect2.width) - x;
+  const height = Math.min(rect1.y + rect1.height, rect2.y + rect2.height) - y;
+
+  if (width > 0 && height > 0) {
+    return { x, y, width, height };
+  }
+
+  return null; // No intersection
 };

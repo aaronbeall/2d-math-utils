@@ -1,31 +1,12 @@
-import * as line from '../../src/line';
+import { getLineIntersection } from "./../../src/intersection";
+import * as intersection from '../../src/intersection';
 import { DemoFunction } from './index';
 import { clearCanvas, drawLine, drawPoint, drawCircle, drawResults, drag, click, move, key, ResultEntry, drawRect } from '../utils';
-import { Point, point } from '../../src';
+import { Circle, Point, point, vector } from '../../src';
 
-export const lineDemos: Record<keyof typeof line, DemoFunction> = {
-    lineLength: (canvas) => {
-        const ctx = canvas.getContext('2d')!;
-        let lineSegment = { start: { x: 100, y: 100 }, end: { x: 300, y: 300 } };
+export const intersectionDemos: Record<keyof typeof intersection, DemoFunction> = {
 
-        function draw() {
-            clearCanvas(ctx);
-            drawLine(ctx, lineSegment, 'blue');
-            drawResults(ctx, [
-                ['Line Length', line.lineLength(lineSegment)],
-                'Click and drag to draw line'
-            ]);
-        }
-
-        drag({ canvas, draw }, {
-            onStart: pos => lineSegment.start = lineSegment.end = pos,
-            onDrag: pos => lineSegment.end = pos
-        });
-
-        draw();
-    },
-
-    lineIntersection: (canvas) => {
+    getLineIntersection: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         let line1 = { start: { x: 100, y: 100 }, end: { x: 300, y: 300 } };
         let line2 = { start: { x: 100, y: 300 }, end: { x: 300, y: 100 } };
@@ -35,11 +16,11 @@ export const lineDemos: Record<keyof typeof line, DemoFunction> = {
             clearCanvas(ctx);
             drawLine(ctx, line1, 'blue');
             drawLine(ctx, line2, 'red');
-            const intersection = line.lineIntersection(line1, line2);
-            if (intersection) drawPoint(ctx, intersection, 'green');
+            const p = intersection.getLineIntersection(line1, line2);
+            if (p) drawPoint(ctx, p, 'green');
 
             drawResults(ctx, [
-                ['Intersection', intersection || 'None'],
+                ['Intersection', p || 'None'],
                 'Drag endpoints to adjust the lines'
             ]);
         }
@@ -62,7 +43,7 @@ export const lineDemos: Record<keyof typeof line, DemoFunction> = {
         draw();
     },
 
-    lineCircleIntersection: (canvas) => {
+    getLineCircleIntersections: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         let lineSegment = { start: { x: 100, y: 100 }, end: { x: 300, y: 300 } };
         let circle = { x: 200, y: 200, radius: 50 };
@@ -72,7 +53,7 @@ export const lineDemos: Record<keyof typeof line, DemoFunction> = {
             clearCanvas(ctx);
             drawLine(ctx, lineSegment, 'blue');
             drawCircle(ctx, circle, 'red');
-            const intersections = line.lineCircleIntersection(lineSegment, circle);
+            const intersections = intersection.getLineCircleIntersections(lineSegment, circle);
             intersections.forEach(p => drawPoint(ctx, p, 'green'));
 
             drawResults(ctx, [
@@ -100,7 +81,7 @@ export const lineDemos: Record<keyof typeof line, DemoFunction> = {
         draw();
     },
 
-    lineRectIntersection: (canvas) => {
+    getLineRectIntersections: (canvas) => {
         const ctx = canvas.getContext('2d')!;
         let lineSegment = { start: { x: 100, y: 100 }, end: { x: 300, y: 300 } };
         let rect = { x: 150, y: 150, width: 100, height: 100 };
@@ -110,7 +91,7 @@ export const lineDemos: Record<keyof typeof line, DemoFunction> = {
             clearCanvas(ctx);
             drawLine(ctx, lineSegment, 'blue');
             drawRect(ctx, rect, 'red');
-            const intersections = line.lineRectIntersection(lineSegment, rect);
+            const intersections = intersection.getLineRectIntersections(lineSegment, rect);
             intersections.forEach(p => drawPoint(ctx, p, 'green'));
 
             drawResults(ctx, [
@@ -138,84 +119,91 @@ export const lineDemos: Record<keyof typeof line, DemoFunction> = {
         draw();
     },
 
-    rotateLine: (canvas) => {
+    getCircleOverlap: (canvas) => {
         const ctx = canvas.getContext('2d')!;
-        let lineSegment = { start: { x: 100, y: 100 }, end: { x: 300, y: 300 } };
-        let angle = 0;
-        let useMidpoint = true; // Toggle between midpoint and canvas center
-        const canvasCenter = { x: canvas.width / 2, y: canvas.height / 2 };
+        let circle1 = { x: 200, y: 200, radius: 100 };
+        let circle2 = { x: 300, y: 200, radius: 50 };
+        let draggedCircle: Point | null = null;
 
         function draw() {
             clearCanvas(ctx);
+            drawCircle(ctx, circle1, 'blue');
+            drawCircle(ctx, circle2, 'red');
+            const overlap = intersection.getCircleOverlap(circle1, circle2);
 
-            // Determine rotation center
-            const rotationCenter = useMidpoint 
-                ? point.midpoint(lineSegment.start, lineSegment.end) 
-                : canvasCenter;
+            if (overlap > 0) {
+                // Use getLineCircleIntersections to find overlap center
+                const line = { start: circle1, end: circle2 };
+                const intersections = intersection.getLineCircleIntersections(line, {
+                    x: circle1.x,
+                    y: circle1.y,
+                    radius: circle1.radius - overlap / 2,
+                });
 
-            // Draw original line
-            drawLine(ctx, lineSegment, 'blue');
-
-            // Rotate line around the selected center
-            const rotated = line.rotateLine(lineSegment, angle, rotationCenter);
-            drawLine(ctx, rotated, 'red');
-
-            // Draw rotation center
-            drawPoint(ctx, rotationCenter, 'green');
+                if (intersections.length > 0) {
+                    const overlapCenter = intersections[0];
+                    drawCircle(ctx, { x: overlapCenter.x, y: overlapCenter.y, radius: overlap / 2 }, 'green', true);
+                }
+            }
 
             drawResults(ctx, [
-                ['Angle (radians)', angle.toFixed(2)],
-                ['Rotation Center', useMidpoint ? 'Line Midpoint' : 'Canvas Center'],
-                'Click and drag to draw line',
-                'Use +/- to rotate the line',
-                'Press C to toggle rotation center'
+                ['Overlap Depth', overlap],
+                'Drag circles to adjust'
             ]);
         }
 
         drag({ canvas, draw }, {
-            onStart: pos => lineSegment.start = lineSegment.end = pos,
-            onDrag: pos => lineSegment.end = pos
-        });
-
-        key({ canvas, draw }, {
-            '+': () => angle += Math.PI / 18,
-            '-': () => angle -= Math.PI / 18,
-            'c': () => useMidpoint = !useMidpoint
+            onStart: pos => {
+                const points = [circle1, circle2];
+                draggedCircle = point.closest(pos, points);
+            },
+            onDrag: pos => {
+                if (draggedCircle) {
+                    draggedCircle.x = pos.x;
+                    draggedCircle.y = pos.y;
+                }
+            },
+            onEnd: () => {
+                draggedCircle = null;
+            }
         });
 
         draw();
     },
 
-    expandLine: (canvas) => {
+    getRectanglesIntersection: (canvas) => {
         const ctx = canvas.getContext('2d')!;
-        let lineSegment = { start: { x: 100, y: 100 }, end: { x: 300, y: 300 } };
-        let expansionLength = 50;
+        let rect1 = { x: 100, y: 100, width: 150, height: 100 };
+        let rect2 = { x: 200, y: 150, width: 250, height: 150 };
+        let draggedRect: Point | null = null;
 
         function draw() {
             clearCanvas(ctx);
-            const expanded = line.expandLine(lineSegment, expansionLength);
-            drawLine(ctx, expanded, 'red', 2);
-            drawLine(ctx, lineSegment, 'blue');
-
-            // Draw blue dots at the ends of the line
-            drawPoint(ctx, lineSegment.start, 'blue', 5);
-            drawPoint(ctx, lineSegment.end, 'blue', 5);
+            drawRect(ctx, rect1, 'blue');
+            drawRect(ctx, rect2, 'red');
+            const intersectionRect = intersection.getRectanglesIntersection(rect1, rect2);
+            if (intersectionRect) drawRect(ctx, intersectionRect, 'green', true);
 
             drawResults(ctx, [
-                ['Expansion Length', expansionLength],
-                'Click and drag to draw line',
-                'Use +/- to expand or shrink the line'
+                ['Intersection', intersectionRect || 'None'],
+                'Drag rectangles to adjust'
             ]);
         }
 
         drag({ canvas, draw }, {
-            onStart: pos => lineSegment.start = lineSegment.end = pos,
-            onDrag: pos => lineSegment.end = pos
-        });
-
-        key({ canvas, draw }, {
-            '+': () => expansionLength += 10,
-            '-': () => expansionLength = Math.max(0, expansionLength - 10)
+            onStart: pos => {
+                const points = [rect1, rect2];
+                draggedRect = point.closest(pos, points);
+            },
+            onDrag: pos => {
+                if (draggedRect) {
+                    draggedRect.x = pos.x;
+                    draggedRect.y = pos.y;
+                }
+            },
+            onEnd: () => {
+                draggedRect = null;
+            }
         });
 
         draw();

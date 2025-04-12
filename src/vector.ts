@@ -93,8 +93,8 @@ export const clamp = (v: Vector2d, minLength: number, maxLength: number): Vector
  * @param t Interpolation value (0-1). 0 = start, 1 = end, 0.5 = halfway between
  */
 export const interpolate = (start: Vector2d, end: Vector2d, t: number): Vector2d => ({
-  x: start.x + (end.x - start.x) * Math.max(0, Math.min(1, t)),
-  y: start.y + (end.y - start.y) * Math.max(0, Math.min(1, t))
+  x: start.x + (end.x - start.x) * t,
+  y: start.y + (end.y - start.y) * t
 });
 
 /**
