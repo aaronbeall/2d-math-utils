@@ -23,6 +23,8 @@ export class PhysicalBody {
   radius: number = 0;          // Collision radius
   elasticity: number = 0.8;    // Bounce factor (0 = stop, 1 = perfect bounce)
   collisionOverlapResolution: 'separate' | 'repel' | 'none' = 'separate'; // Overlap resolution mode
+  minSpeed: number = 0; // Velocity below this will be set to zero
+  maxSpeed?: number; // Velocity above this will be clamped to this value
 
   /** Top-Down Properties (for top-down games like tanks, racing) */
   angle: number = 0;           // Rotation angle in radians
@@ -54,6 +56,15 @@ export class PhysicalBody {
 
     // Update velocity with acceleration
     physics.applyForce(this.velocity, this.acceleration, deltaTime);
+
+    // Clamp velocity to minSpeed and maxSpeed if set
+    const speed = vector.length(this.velocity);
+    if (this.maxSpeed !== undefined && speed > this.maxSpeed) {
+      this.velocity = vector.scale(vector.normalize(this.velocity), this.maxSpeed);
+    }
+    if (speed < this.minSpeed) {
+      this.velocity = vector.zero(); // Zero the velocity if below minSpeed
+    }
 
     // Update position with velocity
     physics.applyForce(this.position, this.velocity, deltaTime);
@@ -167,4 +178,16 @@ export class PhysicalBody {
   // Getters and Setters for y position
   get y() { return this.position.y; }
   set y(value: number) { this.position.y = value; }
+
+  get speed(): number {
+    return vector.length(this.velocity);
+  }
+
+  set speed(value: number) {
+    if (Math.abs(value) < this.minSpeed) {
+      this.velocity = vector.zero(); // Zero the velocity if below minSpeed
+    } else {
+      this.velocity = vector.resize(this.velocity, value);
+    }
+  }
 }

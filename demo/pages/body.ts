@@ -1,5 +1,5 @@
-import { radiansBetweenPoints } from "./../../src/angle";
-import { angle, PhysicalBody, Point, Vector2d } from '../../src';
+import { degreesToRadians, radiansBetweenPoints } from "./../../src/angle";
+import { angle, PhysicalBody, physics, Point, Vector2d } from '../../src';
 import { DemoFunction } from './index';
 import * as point from '../../src/point';
 import * as vector from '../../src/vector';
@@ -408,7 +408,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
                         radius: Math.random() * 3 + 1,
                         life: 1,
                         velocity: vector.add(
-                            vector.fromAngleRadians(ship.angle, -300),
+                            vector.fromAngleRadians(ship.angle, -100),
                             vector.fromAngleRadians(Math.random() * Math.PI * 2, Math.random() * 50)
                         )
                     });
@@ -654,7 +654,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
         class Tank extends PhysicalBody {
             angle = 0;
             turretAngle = 0;
-            speed = 0;
+            throttle = 0;
             turretRotationSpeed = 5;
             
             constructor() {
@@ -669,10 +669,10 @@ export const bodyDemos: Record<string, DemoFunction> = {
                 this.turretAngle = angle.rotateAngleTowardsRadians(this.turretAngle, mouseTargetAngle, this.turretRotationSpeed * deltaTime);
 
                 // Tank movement -- always move in the direction of the tank's angle
-                this.velocity = vector.fromAngleRadians(tank.angle, tank.speed);
+                this.velocity = vector.fromAngleRadians(tank.angle, tank.throttle);
                 
                 // Apply drag
-                this.speed *= 0.99;
+                this.throttle *= 0.99;
 
                 super.update(deltaTime);
             }
@@ -734,8 +734,8 @@ export const bodyDemos: Record<string, DemoFunction> = {
             const throttleSpeed = 400;
             if (keys.isDown('ArrowLeft')) tank.angle -= turnSpeed * deltaTime;
             if (keys.isDown('ArrowRight')) tank.angle += turnSpeed * deltaTime;
-            if (keys.isDown('ArrowUp')) tank.speed = Math.min(200, tank.speed + throttleSpeed * deltaTime);
-            if (keys.isDown('ArrowDown')) tank.speed = Math.max(-100, tank.speed - throttleSpeed * deltaTime);
+            if (keys.isDown('ArrowUp')) tank.throttle = Math.min(200, tank.throttle + throttleSpeed * deltaTime);
+            if (keys.isDown('ArrowDown')) tank.throttle = Math.max(-100, tank.throttle - throttleSpeed * deltaTime);
 
             // Tank movement
             tank.update(deltaTime);
@@ -824,25 +824,24 @@ export const bodyDemos: Record<string, DemoFunction> = {
         const ctx = canvas.getContext('2d')!;
         
         class Car extends PhysicalBody {
-            angle = 0;
-            speed = 0;
             steering = 0;
+            throttle = 0;
             
             constructor() {
                 super({ x: canvas.width/2, y: canvas.height/2, mass: 2 });
                 this.radius = 20;
-                this.mass = 100;
+                this.mass = 20;
             }
             
             update(deltaTime: number) {
                 // Apply steering
-                this.angle += this.steering * this.speed * deltaTime * 0.003;
+                this.angle += this.steering * this.throttle * deltaTime * 0.003;
                 
                 // Update velocity based on car's angle
-                this.velocity = vector.fromAngleRadians(this.angle, this.speed);
+                this.velocity = vector.fromAngleRadians(this.angle, this.throttle);
                 
                 // Apply drag
-                this.speed *= 0.99;
+                this.throttle *= 0.99;
                 
                 super.update(deltaTime);
             }
@@ -850,7 +849,7 @@ export const bodyDemos: Record<string, DemoFunction> = {
 
         class Obstacle extends PhysicalBody {
             constructor(x: number, y: number, radius: number) {
-                super({ x, y, mass: radius * 10 });
+                super({ x, y, mass: radius ** 2 });
                 this.radius = radius;
                 this.elasticity = 0.8;
                 this.friction = 0.002;
@@ -858,11 +857,11 @@ export const bodyDemos: Record<string, DemoFunction> = {
         }
         
         const car = new Car();
-        const obstacles: Obstacle[] = Array.from({ length: 15 }, () => 
+        const obstacles: Obstacle[] = Array.from({ length: 50 }, () => 
             new Obstacle(
                 Math.random() * canvas.width,
                 Math.random() * canvas.height,
-                10 + Math.random() * 20
+                5 + (Math.random() ** 5) * 25
             )
         );
         keys.listen();
@@ -875,8 +874,8 @@ export const bodyDemos: Record<string, DemoFunction> = {
             else car.steering = 0;
 
             const throttleSpeed = 400;
-            if (keys.isDown('ArrowUp')) car.speed = Math.min(300, car.speed + throttleSpeed * deltaTime);
-            if (keys.isDown('ArrowDown')) car.speed = Math.max(-100, car.speed - throttleSpeed * deltaTime);
+            if (keys.isDown('ArrowUp')) car.throttle = Math.min(300, car.throttle + throttleSpeed * deltaTime);
+            if (keys.isDown('ArrowDown')) car.throttle = Math.max(-100, car.throttle - throttleSpeed * deltaTime);
 
             car.update(deltaTime);
 
@@ -934,4 +933,116 @@ export const bodyDemos: Record<string, DemoFunction> = {
         
         return simulate(update, draw);
     },
+
+    "Chase": (canvas) => {
+        const ctx = canvas.getContext('2d')!;
+
+        class Bird extends PhysicalBody {
+            static MIN_THRUST_SPEED = 200;
+            static MAX_THRUST_SPEED = 1500;
+            thrustSpeed = Bird.MIN_THRUST_SPEED + (Bird.MAX_THRUST_SPEED - Bird.MIN_THRUST_SPEED) * (Math.random() ** 3);
+            turnSpeed = degreesToRadians(5);
+            trail: Point[] = [];
+            trailLength = 20;
+
+            get color() {
+                const ratio = (this.thrustSpeed - Bird.MIN_THRUST_SPEED) / (Bird.MAX_THRUST_SPEED - Bird.MIN_THRUST_SPEED);
+                const red = Math.round(255 * ratio);
+                const blue = Math.round(255 * (1 - ratio));
+                return `rgb(${red}, 0, ${blue})`;
+            }
+
+            constructor(x: number, y: number) {
+                super({ x, y, mass: 1 });
+                this.radius = 5;
+                this.maxSpeed = 1500;
+                this.friction = 0.01;
+            }
+
+            chase(target: Point) {
+                this.pointTowards(target, this.turnSpeed);
+                this.thrust(this.thrustSpeed);
+            }
+
+            update(deltaTime: number) {
+                super.update(deltaTime);
+
+                // Add the current position to the trail
+                this.trail.push({ ...this.position });
+
+                // Keep only the last 20 positions
+                if (this.trail.length > this.trailLength) {
+                    this.trail.shift();
+                }
+            }
+        }
+
+        const birds: Bird[] = Array.from({ length: 50 }, () => 
+            new Bird(Math.random() * canvas.width, Math.random() * canvas.height)
+        );
+
+        const addBirds = (count: number) => {
+            for (let i = 0; i < count; i++) {
+                birds.push(new Bird(Math.random() * canvas.width, Math.random() * canvas.height));
+            }
+        };
+
+        const removeBirds = (count: number) => {
+            birds.splice(-count, count);
+        };
+
+        let mousePos: Point = { x: canvas.width / 2, y: canvas.height / 2 };
+
+        move({ canvas, draw }, (pos) => {
+            mousePos = pos;
+        });
+
+        function update(deltaTime: number) {
+            birds.forEach((bird, i) => {
+                // Chase the mouse
+                bird.chase(mousePos);
+
+                // Repel from other birds
+                birds.slice(i + 1).forEach(other => {
+                    physics.repel(bird, other, 20)
+                });
+
+                bird.update(deltaTime);
+            });
+        }
+
+        function draw() {
+            clearCanvas(ctx);
+
+            // Draw birds
+            birds.forEach(bird => {
+                drawPoint(ctx, bird.position, bird.color, 2);
+
+                // Draw the trailing path
+                ctx.beginPath();
+                bird.trail.forEach(pos => 
+                    ctx.lineTo(pos.x, pos.y)
+                );
+                ctx.strokeStyle = bird.color;
+                ctx.stroke();
+            });
+
+            // Draw mouse position
+            drawCircle(ctx, { x: mousePos.x, y: mousePos.y, radius: 5 }, 'red', true);
+
+            // Render results
+            drawResults(ctx, [
+                ['Number of Birds', birds.length, { precision: 0 }],
+                'Move the mouse to attract the birds',
+                'Press +/- to add/remove 10 birds'
+            ]);
+        }
+
+        key({ canvas, draw }, {
+            '+': () => addBirds(10),
+            '-': () => removeBirds(10),
+        });
+
+        return simulate(update, draw);
+    }
 };
