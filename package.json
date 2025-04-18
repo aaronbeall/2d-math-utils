@@ -1,6 +1,6 @@
 {
   "name": "2d-math-utils",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "2D math utilities library",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
