@@ -31,5 +31,10 @@
   ],
   "dependencies": {
     "lit-html": "^2.7.5"
+  },
+  "targets": {	
+    "module": false,
+    "main": false,
+    "types": false
   }
 }
