@@ -10,7 +10,7 @@
     "test:watch": "jest --watch",
     "start:demo": "parcel serve demo/index.html --dist-dir .parcel-cache/demo",
     "build:demo": "parcel build demo/index.html --dist-dir docs --public-url ./",
-    "prepublishOnly": "npm run build && npm run build:demo"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "math",
